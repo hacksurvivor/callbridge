@@ -28,6 +28,22 @@ export function canRunProactiveFollowUp(input: {
   return !Number.isNaN(expiresAt.getTime()) && input.now.getTime() < expiresAt.getTime();
 }
 
+/** Monitoring is opt-in by importance, with a small automatic window before an event. */
+export function shouldMonitorConfirmedCommitment(input: {
+  confirmed: boolean;
+  important: boolean;
+  occursAt?: string;
+  now: Date;
+}): boolean {
+  if (!input.confirmed) return false;
+  if (input.important) return true;
+  if (!input.occursAt) return false;
+  const occursAt = new Date(input.occursAt);
+  if (Number.isNaN(occursAt.getTime())) return false;
+  const millisecondsUntil = occursAt.getTime() - input.now.getTime();
+  return millisecondsUntil >= 0 && millisecondsUntil <= 48 * 60 * 60 * 1_000;
+}
+
 export type MemoryDisposition = {
   saveDerivedMemory: boolean;
   purgeAt: string;

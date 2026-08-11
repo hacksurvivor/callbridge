@@ -6,6 +6,7 @@ import {
   canRunProactiveFollowUp,
   memoryDisposition,
   planAutomaticRetry,
+  shouldMonitorConfirmedCommitment,
 } from "../src/domain/taskPolicy.js";
 import { completeDraft } from "./fixtures.js";
 
@@ -165,6 +166,32 @@ describe("task policy", () => {
         autonomy: authorized,
         now: new Date("2026-08-11T22:00:00.000Z"),
       }),
+    ).toBe(false);
+  });
+
+  it("monitors only important or soon confirmed commitments", () => {
+    const now = new Date("2026-08-11T10:00:00.000Z");
+    expect(
+      shouldMonitorConfirmedCommitment({
+        confirmed: true,
+        important: false,
+        occursAt: "2026-08-13T09:00:00.000Z",
+        now,
+      }),
+    ).toBe(true);
+    expect(
+      shouldMonitorConfirmedCommitment({
+        confirmed: true,
+        important: false,
+        occursAt: "2026-08-13T11:00:01.000Z",
+        now,
+      }),
+    ).toBe(false);
+    expect(
+      shouldMonitorConfirmedCommitment({ confirmed: true, important: true, now }),
+    ).toBe(true);
+    expect(
+      shouldMonitorConfirmedCommitment({ confirmed: false, important: true, now }),
     ).toBe(false);
   });
 });
