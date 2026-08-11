@@ -40,6 +40,29 @@ export const listMine = query({
   },
 });
 
+export const listSharedWithMe = query({
+  args: {},
+  returns: v.array(
+    v.object({
+      _id: v.id("relationshipMemories"),
+      memory: relationshipMemoryValidator,
+      createdAt: v.string(),
+      updatedAt: v.string(),
+    }),
+  ),
+  handler: async (ctx) => {
+    const userId = await requireUserId(ctx);
+    const access = await ctx.db
+      .query("relationshipMemoryAccess")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    const records = await Promise.all(access.map((entry) => ctx.db.get("relationshipMemories", entry.memoryId)));
+    return records
+      .filter((record): record is NonNullable<typeof record> => record !== null)
+      .map(({ _id, memory, createdAt, updatedAt }) => ({ _id, memory, createdAt, updatedAt }));
+  },
+});
+
 export const create = mutation({
   args: { memory: relationshipMemoryValidator },
   returns: v.id("relationshipMemories"),
