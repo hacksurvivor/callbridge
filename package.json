@@ -1,0 +1,20 @@
+{
+  "name": "callbridge-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "convex": "1.43.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.0",
+    "typescript": "7.0.2",
+    "vitest": "4.1.10"
+  }
+}
