@@ -5,6 +5,7 @@ import {
   callTaskDraftValidator,
   callTaskStatusValidator,
   cancellationRequestValidator,
+  communicationPreferencesValidator,
   confirmationValidator,
   friendlyPermissionLevelValidator,
   historyVisibilityValidator,
@@ -113,4 +114,10 @@ export default defineSchema({
     eventName: v.string(),
     appliedAt: v.string(),
   }).index("by_event_id", ["eventId"]),
+
+  communicationPreferences: defineTable({
+    userId: v.string(),
+    preferences: communicationPreferencesValidator,
+    updatedAt: v.string(),
+  }).index("by_user", ["userId"]),
 });

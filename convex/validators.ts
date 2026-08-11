@@ -276,3 +276,15 @@ export const notificationPreferenceValidator = v.union(
   v.literal("push"),
   v.literal("monitor_only"),
 );
+
+export const communicationPreferencesValidator = v.object({
+  timeZone: v.string(),
+  quietHours: v.object({
+    startsAt: v.string(),
+    endsAt: v.string(),
+  }),
+  morningBrief: v.object({
+    enabled: v.boolean(),
+    deliverAt: v.string(),
+  }),
+});
