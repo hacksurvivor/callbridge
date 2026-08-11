@@ -10,6 +10,7 @@ import {
   friendlyPermissionLevelValidator,
   historyVisibilityValidator,
   notificationPreferenceValidator,
+  taskActivityEventValidator,
 } from "./validators.js";
 
 export default defineSchema({
@@ -126,4 +127,10 @@ export default defineSchema({
     preferences: communicationPreferencesValidator,
     updatedAt: v.string(),
   }).index("by_user", ["userId"]),
+
+  taskActivityEvents: defineTable({
+    taskId: v.id("callTasks"),
+    sequence: v.number(),
+    event: taskActivityEventValidator,
+  }).index("by_task_sequence", ["taskId", "sequence"]),
 });

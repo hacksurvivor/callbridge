@@ -294,3 +294,24 @@ export const communicationPreferencesValidator = v.object({
     deliverAt: v.string(),
   }),
 });
+
+export const taskActivityKindValidator = v.union(
+  v.literal("task_started"),
+  v.literal("lookup"),
+  v.literal("contact_attempt"),
+  v.literal("contact_answered"),
+  v.literal("offer_found"),
+  v.literal("decision_required"),
+  v.literal("task_completed"),
+  v.literal("task_paused"),
+  v.literal("task_stopped"),
+  v.literal("warning"),
+);
+
+export const taskActivityEventValidator = v.object({
+  kind: taskActivityKindValidator,
+  summary: v.string(),
+  actionLabel: v.optional(v.string()),
+  source: v.union(v.literal("agent"), v.literal("system"), v.literal("user")),
+  occurredAt: v.string(),
+});
