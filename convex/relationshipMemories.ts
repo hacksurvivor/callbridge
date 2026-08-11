@@ -95,3 +95,45 @@ export const remove = mutation({
     return null;
   },
 });
+
+export const shareViewOnly = mutation({
+  args: { memoryId: v.id("relationshipMemories"), userId: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const ownerId = await requireUserId(ctx);
+    const memory = await ctx.db.get("relationshipMemories", args.memoryId);
+    if (!memory) throw new ConvexError({ code: "NOT_FOUND" });
+    if (memory.ownerId !== ownerId) throw new ConvexError({ code: "FORBIDDEN" });
+    const memoryUserKey = `${args.memoryId}:${args.userId}`;
+    const existing = await ctx.db
+      .query("relationshipMemoryAccess")
+      .withIndex("by_memory_user", (q) => q.eq("memoryUserKey", memoryUserKey))
+      .unique();
+    if (!existing) {
+      await ctx.db.insert("relationshipMemoryAccess", {
+        memoryId: args.memoryId,
+        userId: args.userId,
+        memoryUserKey,
+        sharedAt: new Date().toISOString(),
+      });
+    }
+    return null;
+  },
+});
+
+export const revokeViewOnly = mutation({
+  args: { memoryId: v.id("relationshipMemories"), userId: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const ownerId = await requireUserId(ctx);
+    const memory = await ctx.db.get("relationshipMemories", args.memoryId);
+    if (!memory) throw new ConvexError({ code: "NOT_FOUND" });
+    if (memory.ownerId !== ownerId) throw new ConvexError({ code: "FORBIDDEN" });
+    const access = await ctx.db
+      .query("relationshipMemoryAccess")
+      .withIndex("by_memory_user", (q) => q.eq("memoryUserKey", `${args.memoryId}:${args.userId}`))
+      .unique();
+    if (access) await ctx.db.delete("relationshipMemoryAccess", access._id);
+    return null;
+  },
+});

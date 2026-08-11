@@ -141,4 +141,13 @@ export default defineSchema({
     createdAt: v.string(),
     updatedAt: v.string(),
   }).index("by_owner", ["ownerId"]),
+
+  relationshipMemoryAccess: defineTable({
+    memoryId: v.id("relationshipMemories"),
+    userId: v.string(),
+    memoryUserKey: v.string(),
+    sharedAt: v.string(),
+  })
+    .index("by_memory_user", ["memoryUserKey"])
+    .index("by_user", ["userId"]),
 });
