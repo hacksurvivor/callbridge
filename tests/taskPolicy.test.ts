@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   canAutomaticallyTryNextNumber,
   canCompleteAction,
+  canRunProactiveFollowUp,
   memoryDisposition,
   planAutomaticRetry,
 } from "../src/domain/taskPolicy.js";
@@ -142,6 +143,27 @@ describe("task policy", () => {
         verified: false,
         alreadyTried: false,
         stopped: false,
+      }),
+    ).toBe(false);
+  });
+
+  it("requires a time-bounded Full Access authorization for proactive follow-up", () => {
+    const draft = completeDraft();
+    const now = new Date("2026-08-11T10:00:00.000Z");
+    expect(canRunProactiveFollowUp({ autonomy: draft.autonomy, now })).toBe(false);
+    const authorized = {
+      ...draft.autonomy,
+      fullAccess: true,
+      proactiveFollowUp: {
+        goal: "Check the hotel for a quiet room",
+        expiresAt: "2026-08-11T22:00:00.000Z",
+      },
+    };
+    expect(canRunProactiveFollowUp({ autonomy: authorized, now })).toBe(true);
+    expect(
+      canRunProactiveFollowUp({
+        autonomy: authorized,
+        now: new Date("2026-08-11T22:00:00.000Z"),
       }),
     ).toBe(false);
   });

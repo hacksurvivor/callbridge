@@ -110,6 +110,11 @@ export type AutonomySettings = {
   mentionPastVisits: boolean;
   useCompetitorPricing: boolean;
   nameCompetitorAndExactPrice: boolean;
+  /** Explicit, task-scoped consent to keep checking while the user is unavailable. */
+  proactiveFollowUp?: {
+    goal: string;
+    expiresAt: string;
+  };
 };
 
 export type MemoryRetention =

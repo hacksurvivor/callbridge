@@ -41,6 +41,12 @@ export const autonomySettingsValidator = v.object({
   mentionPastVisits: v.boolean(),
   useCompetitorPricing: v.boolean(),
   nameCompetitorAndExactPrice: v.boolean(),
+  proactiveFollowUp: v.optional(
+    v.object({
+      goal: v.string(),
+      expiresAt: v.string(),
+    }),
+  ),
 });
 
 export const memoryRetentionValidator = v.union(

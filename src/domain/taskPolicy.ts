@@ -18,6 +18,16 @@ export const DEFAULT_AUTONOMY: AutonomySettings = Object.freeze({
   nameCompetitorAndExactPrice: false,
 });
 
+export function canRunProactiveFollowUp(input: {
+  autonomy: AutonomySettings;
+  now: Date;
+}): boolean {
+  const authorization = input.autonomy.proactiveFollowUp;
+  if (!input.autonomy.fullAccess || !authorization) return false;
+  const expiresAt = new Date(authorization.expiresAt);
+  return !Number.isNaN(expiresAt.getTime()) && input.now.getTime() < expiresAt.getTime();
+}
+
 export type MemoryDisposition = {
   saveDerivedMemory: boolean;
   purgeAt: string;

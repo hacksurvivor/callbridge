@@ -103,6 +103,12 @@ export const autonomySettingsSchema = z
     mentionPastVisits: z.boolean(),
     useCompetitorPricing: z.boolean(),
     nameCompetitorAndExactPrice: z.boolean(),
+    proactiveFollowUp: z
+      .object({
+        goal: nonBlank.max(500),
+        expiresAt: z.string().datetime({ offset: true }),
+      })
+      .optional(),
   })
   .superRefine((value, context) => {
     if (
@@ -121,6 +127,13 @@ export const autonomySettingsSchema = z
         code: "custom",
         path: ["nameCompetitorAndExactPrice"],
         message: "Exact competitor prices require competitor pricing to be enabled",
+      });
+    }
+    if (value.proactiveFollowUp && !value.fullAccess) {
+      context.addIssue({
+        code: "custom",
+        path: ["fullAccess"],
+        message: "Proactive follow-up requires Full Access for this task",
       });
     }
   });
@@ -308,6 +321,12 @@ export function validateForConfirmation(value: unknown): ValidatedCallTaskDraft 
       "The draft is not ready for confirmation",
       missing,
     );
+  }
+  if (
+    draft.autonomy.proactiveFollowUp &&
+    new Date(draft.autonomy.proactiveFollowUp.expiresAt).getTime() <= Date.now()
+  ) {
+    throw new DomainError("VALIDATION_FAILED", "Proactive follow-up has already expired");
   }
   return draft;
 }
