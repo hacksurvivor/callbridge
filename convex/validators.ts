@@ -315,3 +315,14 @@ export const taskActivityEventValidator = v.object({
   source: v.union(v.literal("agent"), v.literal("system"), v.literal("user")),
   occurredAt: v.string(),
 });
+
+export const relationshipMemoryValidator = v.object({
+  category: taskCategoryValidator,
+  placeName: v.string(),
+  placeAddress: v.optional(v.string()),
+  summary: v.string(),
+  facts: v.array(v.string()),
+  lastRelevantDate: v.optional(v.string()),
+  mayUseInCalls: v.boolean(),
+  visibility: v.literal("owner_only"),
+});

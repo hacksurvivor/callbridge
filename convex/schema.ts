@@ -11,6 +11,7 @@ import {
   historyVisibilityValidator,
   notificationPreferenceValidator,
   taskActivityEventValidator,
+  relationshipMemoryValidator,
 } from "./validators.js";
 
 export default defineSchema({
@@ -133,4 +134,11 @@ export default defineSchema({
     sequence: v.number(),
     event: taskActivityEventValidator,
   }).index("by_task_sequence", ["taskId", "sequence"]),
+
+  relationshipMemories: defineTable({
+    ownerId: v.string(),
+    memory: relationshipMemoryValidator,
+    createdAt: v.string(),
+    updatedAt: v.string(),
+  }).index("by_owner", ["ownerId"]),
 });
