@@ -161,6 +161,7 @@ describe("task policy", () => {
       },
     };
     expect(canRunProactiveFollowUp({ autonomy: authorized, now })).toBe(true);
+    expect(canRunProactiveFollowUp({ autonomy: authorized, now, stopped: true })).toBe(false);
     expect(
       canRunProactiveFollowUp({
         autonomy: authorized,

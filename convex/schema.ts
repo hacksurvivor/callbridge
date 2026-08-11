@@ -26,6 +26,12 @@ export default defineSchema({
         stoppedByUserId: v.string(),
       }),
     ),
+    proactiveControl: v.optional(
+      v.object({
+        stoppedAt: v.string(),
+        stoppedByUserId: v.string(),
+      }),
+    ),
     execution: v.optional(
       v.object({
         externalSessionId: v.string(),

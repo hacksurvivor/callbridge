@@ -21,9 +21,10 @@ export const DEFAULT_AUTONOMY: AutonomySettings = Object.freeze({
 export function canRunProactiveFollowUp(input: {
   autonomy: AutonomySettings;
   now: Date;
+  stopped?: boolean;
 }): boolean {
   const authorization = input.autonomy.proactiveFollowUp;
-  if (!input.autonomy.fullAccess || !authorization) return false;
+  if (input.stopped || !input.autonomy.fullAccess || !authorization) return false;
   const expiresAt = new Date(authorization.expiresAt);
   return !Number.isNaN(expiresAt.getTime()) && input.now.getTime() < expiresAt.getTime();
 }

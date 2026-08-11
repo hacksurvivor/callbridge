@@ -239,6 +239,10 @@ export type CallTask = {
     stoppedAt: string;
     stoppedByUserId: string;
   };
+  proactiveControl?: {
+    stoppedAt: string;
+    stoppedByUserId: string;
+  };
   execution?: {
     externalSessionId: string;
     startedAt: string;

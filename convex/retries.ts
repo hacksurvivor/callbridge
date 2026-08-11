@@ -29,11 +29,15 @@ export const stop = mutation({
         throw new ConvexError({ code: "FORBIDDEN" });
       }
     }
-    if (task.retryControl) return args.taskId;
+    if (task.retryControl && task.proactiveControl) return args.taskId;
     const now = new Date().toISOString();
     await ctx.db.patch("callTasks", args.taskId, {
       revision: task.revision + 1,
-      retryControl: {
+      retryControl: task.retryControl ?? {
+        stoppedAt: now,
+        stoppedByUserId: userId,
+      },
+      proactiveControl: task.proactiveControl ?? {
         stoppedAt: now,
         stoppedByUserId: userId,
       },
