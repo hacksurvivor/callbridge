@@ -2,11 +2,14 @@
 node_modules/
 dist/
 .expo/
+.convex/
+coverage/
 
 # Local configuration and secrets
 .env
 .env.*
 !.env.example
+*.local
 
 # OS and editor files
 .DS_Store
