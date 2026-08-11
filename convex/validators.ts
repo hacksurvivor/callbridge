@@ -87,6 +87,27 @@ export const detailValueValidator = v.union(
   v.array(v.string()),
 );
 
+export const dateResolutionValidator = v.union(
+  v.object({
+    source: v.literal("explicit"),
+    checkIn: v.string(),
+    checkOut: v.string(),
+    resolvedAt: v.string(),
+    referenceTimeZone: v.string(),
+    timeZoneSource: v.union(v.literal("device"), v.literal("profile"), v.literal("manual")),
+  }),
+  v.object({
+    source: v.literal("relative"),
+    expression: v.literal("next_weekend"),
+    referenceInstant: v.string(),
+    checkIn: v.string(),
+    checkOut: v.string(),
+    resolvedAt: v.string(),
+    referenceTimeZone: v.string(),
+    timeZoneSource: v.union(v.literal("device"), v.literal("profile"), v.literal("manual")),
+  }),
+);
+
 export const callTaskDraftValidator = v.object({
   category: taskCategoryValidator,
   title: v.string(),
@@ -104,6 +125,7 @@ export const callTaskDraftValidator = v.object({
     address: v.optional(v.string()),
   }),
   details: v.record(v.string(), detailValueValidator),
+  dateResolution: v.optional(dateResolutionValidator),
   deliveryInstructions: v.optional(
     v.object({
       savedLocationId: v.optional(v.string()),

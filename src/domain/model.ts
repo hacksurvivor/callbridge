@@ -57,6 +57,31 @@ export type Money = {
   currency: string;
 };
 
+/**
+ * Dates that are derived from language are never accepted as untraceable text.
+ * The server stores both the concrete dates and the time-zone basis used to
+ * produce them so a later confirmation cannot silently change their meaning.
+ */
+export type DateResolution =
+  | {
+      source: "explicit";
+      checkIn: string;
+      checkOut: string;
+      resolvedAt: string;
+      referenceTimeZone: string;
+      timeZoneSource: "device" | "profile" | "manual";
+    }
+  | {
+      source: "relative";
+      expression: "next_weekend";
+      referenceInstant: string;
+      checkIn: string;
+      checkOut: string;
+      resolvedAt: string;
+      referenceTimeZone: string;
+      timeZoneSource: "device" | "profile" | "manual";
+    };
+
 export type TaskDetailValue = string | number | boolean | string[];
 
 export type DeliveryInstructions = {
@@ -141,6 +166,7 @@ export type CallTaskDraft = {
   sources: SourceMaterial;
   target: TaskTarget;
   details: Record<string, TaskDetailValue>;
+  dateResolution?: DateResolution;
   deliveryInstructions?: DeliveryInstructions;
   questions: string[];
   budget?: {

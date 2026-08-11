@@ -42,6 +42,14 @@ export function completeDraft(): CallTaskDraft {
       rooms: 1,
       roomPreferences: ["quiet", "non-smoking"],
     },
+    dateResolution: {
+      source: "explicit",
+      checkIn: "2026-09-10",
+      checkOut: "2026-09-13",
+      resolvedAt: "2026-08-11T00:00:00.000Z",
+      referenceTimeZone: "Asia/Bangkok",
+      timeZoneSource: "profile",
+    },
     questions: ["Is breakfast included?", "Is late check-in possible?"],
     budget: {
       maxMinorUnits: 45_000,

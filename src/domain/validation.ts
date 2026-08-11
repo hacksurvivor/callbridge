@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { DomainError } from "./errors.js";
+import { assertDateResolutionMatches } from "./dateResolution.js";
 import { CALL_WINDOW_DAYS, TASK_CATEGORIES } from "./model.js";
 
 const nonBlank = z.string().trim().min(1).max(2_000);
@@ -11,6 +12,34 @@ const languageTag = z
 const isoDate = z.string().date();
 const localTime = z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/);
 const currency = z.string().trim().toUpperCase().regex(/^[A-Z]{3}$/);
+const ianaTimeZone = z.string().trim().min(1).max(100).superRefine((value, context) => {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: value }).format();
+  } catch {
+    context.addIssue({ code: "custom", message: "Must use a valid IANA time zone" });
+  }
+});
+
+const dateResolutionSchema = z.discriminatedUnion("source", [
+  z.object({
+    source: z.literal("explicit"),
+    checkIn: isoDate,
+    checkOut: isoDate,
+    resolvedAt: z.string().datetime({ offset: true }),
+    referenceTimeZone: ianaTimeZone,
+    timeZoneSource: z.enum(["device", "profile", "manual"]),
+  }),
+  z.object({
+    source: z.literal("relative"),
+    expression: z.literal("next_weekend"),
+    referenceInstant: z.string().datetime({ offset: true }),
+    checkIn: isoDate,
+    checkOut: isoDate,
+    resolvedAt: z.string().datetime({ offset: true }),
+    referenceTimeZone: ianaTimeZone,
+    timeZoneSource: z.enum(["device", "profile", "manual"]),
+  }),
+]);
 
 export const sourceMaterialSchema = z
   .object({
@@ -163,6 +192,7 @@ export const callTaskDraftSchema = z.object({
     .refine((value) => Object.keys(value).length <= 80, {
       message: "At most 80 task detail fields are allowed",
     }),
+  dateResolution: dateResolutionSchema.optional(),
   deliveryInstructions: z
     .object({
       savedLocationId: z.string().trim().min(1).max(200).optional(),
@@ -240,6 +270,21 @@ export function validateForConfirmation(value: unknown): ValidatedCallTaskDraft 
       checkOut <= checkIn
     ) {
       missing.push("details.checkOut must be after details.checkIn");
+    }
+    if (!draft.dateResolution) {
+      missing.push("dateResolution is required for accommodation");
+    } else if (
+      typeof checkIn === "string" &&
+      typeof checkOut === "string" &&
+      isoDate.safeParse(checkIn).success &&
+      isoDate.safeParse(checkOut).success
+    ) {
+      try {
+        assertDateResolutionMatches({ resolution: draft.dateResolution, checkIn, checkOut });
+      } catch (error) {
+        if (error instanceof DomainError) missing.push(...error.details, error.message);
+        else throw error;
+      }
     }
   }
 
