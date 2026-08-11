@@ -22,6 +22,8 @@ The product lets a person state what they need and delegates the phone conversat
 
 An agent that takes care of any questions involving phone calls. Unlike a generic chat assistant, it can carry the conversation across languages, return an understandable outcome, and follow the person's stated permissions.
 
+The long-term position is a premium personal AI concierge: it can proactively research relevant opportunities, negotiate and coordinate across travel, restaurants, services and marketplaces, while still respecting the person's permission boundaries.
+
 ## Operating Context
 
 Typical tasks include hotel availability, restaurants, deliveries and couriers, local services, purchases, transport, and other calls. A delivery task can use reusable, per-location instructions such as leave location, entry/intercom, landmark, and contact preference.
