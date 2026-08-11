@@ -13,6 +13,7 @@ Enable CallBridge to become a useful personal concierge without becoming a noisy
 - When a missing user answer materially affects the result, the agent reminds the user and explains the consequence in context. Example: it explains that without room preferences it could select an unsuitable room; it never asks merely to fill a form.
 - The agent first notifies the user about a relevant finding, such as a better hotel, a discount, or an available restaurant time.
 - Relevant findings discovered in the background are notified as they are found, rather than delayed into a digest, because their value can be time-sensitive.
+- Notification delivery observes the user's quiet hours, defaulting to 22:00–08:00 in the user's time zone. A routine finding waits for the next allowed time; only a genuinely time-sensitive offer or an active call awaiting a decision may interrupt quiet hours, with the reason made explicit.
 - Notification preference and background-search preference are independent per category. Disabling notifications changes only delivery; disabling search stops future background research for that category.
 - It must not call, negotiate, reserve, purchase, place a hold, contact a seller, or otherwise commit merely because it found an opportunity.
 - The user explicitly chooses whether to pursue that exact proposal. The user may already have found a better option outside CallBridge.
