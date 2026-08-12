@@ -33,9 +33,8 @@ export class LocalTaskStore {
       ...this.task,
       stage: "active",
       activity: [
-        { title: "Checking the details", detail: "Draft confirmed. No booking or payment is authorised." },
-        { title: "Reception answered", detail: "Thai · translated live", emphasis: true },
-        { title: "Comparing available options", detail: "Waiting for the final price" },
+        { title: "Draft confirmed", detail: "No booking or payment is authorised." },
+        { title: "Waiting for a live calling connection", detail: "Local preview never places a call or invents a response.", emphasis: true },
       ],
     };
     return this.task;
@@ -83,7 +82,7 @@ export class LocalTaskStore {
       ...this.task,
       activity: [
         ...this.task.activity,
-        { title: "Retry scheduled", detail: "I will try the same confirmed number again in 5 minutes." },
+        { title: "Retry preference saved", detail: "A live provider can use this 5-minute retry after it is connected." },
       ],
     };
     return this.task;
