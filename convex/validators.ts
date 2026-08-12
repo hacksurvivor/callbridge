@@ -350,3 +350,8 @@ export const relationshipMemoryValidator = v.object({
   mayUseInCalls: v.boolean(),
   visibility: v.literal("owner_only"),
 });
+
+export const deliveryDisclosureKindValidator = v.union(
+  v.literal("entry_instructions"),
+  v.literal("intercom"),
+);

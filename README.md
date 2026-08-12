@@ -15,6 +15,8 @@ confirmed before the server can hand it to a future call agent.
 - Explicit confirmation bound to the exact reviewed revision
 - Household invitations and per-task sharing with friendly permission levels
 - Fee-aware cancellation preparation and confirmation; no cancellation executor
+- One-time, revision-bound owner consent before a courier can receive saved entry
+  instructions or an intercom code
 - Hard-coded `gather_options_only` permissions; booking, payment, accepting
   terms, cancellation, and any irreversible commitment are structurally forbidden
 - WorkOS AuthKit identity port with fail-closed application behavior

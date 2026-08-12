@@ -101,6 +101,16 @@ revision. The confirmed record contains the exact disclosed terms and fee.
 There is deliberately no mutation, gateway, or state transition that performs
 the cancellation or marks the task cancelled.
 
+## Sensitive delivery disclosure
+
+Saved delivery entry instructions and intercom codes are not covered by a
+general sharing permission. The task owner must approve the exact disclosure
+kind, recipient label, and current task revision. The server-only consume gate
+returns the value once and marks the consent consumed; an edited task, a
+different recipient, a revoked consent, or a second use fails closed. This
+repository has no courier or telephony adapter, so no sensitive value can leave
+the system in this slice.
+
 ## Integration boundaries
 
 `IdentityProvider` is the WorkOS AuthKit adapter target. It must return only an

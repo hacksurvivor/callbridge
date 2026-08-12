@@ -156,6 +156,18 @@ export default defineSchema({
     .index("by_delivery_key", ["deliveryKey"])
     .index("by_owner_date", ["ownerId", "localDate"]),
 
+  sensitiveDisclosureConsents: defineTable({
+    taskId: v.id("callTasks"),
+    taskDisclosureKey: v.string(),
+    ownerId: v.string(),
+    kind: v.union(v.literal("entry_instructions"), v.literal("intercom")),
+    recipientLabel: v.string(),
+    approvedRevision: v.number(),
+    state: v.union(v.literal("approved"), v.literal("consumed"), v.literal("revoked")),
+    approvedAt: v.string(),
+    consumedAt: v.optional(v.string()),
+  }).index("by_task_disclosure", ["taskDisclosureKey"]),
+
   relationshipMemories: defineTable({
     ownerId: v.string(),
     memory: relationshipMemoryValidator,
