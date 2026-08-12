@@ -316,6 +316,30 @@ export const taskActivityEventValidator = v.object({
   occurredAt: v.string(),
 });
 
+export const morningBriefItemValidator = v.union(
+  v.object({
+    kind: v.literal("update"),
+    taskId: v.string(),
+    taskTitle: v.string(),
+    summary: v.string(),
+    occurredAt: v.string(),
+  }),
+  v.object({
+    kind: v.literal("today"),
+    taskId: v.string(),
+    taskTitle: v.string(),
+    summary: v.string(),
+    occursAt: v.string(),
+  }),
+);
+
+export const morningBriefDeliveryPayloadValidator = v.object({
+  type: v.literal("morning_brief"),
+  localDate: v.string(),
+  generatedAt: v.string(),
+  items: v.array(morningBriefItemValidator),
+});
+
 export const relationshipMemoryValidator = v.object({
   category: taskCategoryValidator,
   placeName: v.string(),

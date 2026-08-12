@@ -10,6 +10,7 @@ import {
   friendlyPermissionLevelValidator,
   historyVisibilityValidator,
   notificationPreferenceValidator,
+  morningBriefDeliveryPayloadValidator,
   taskActivityEventValidator,
   relationshipMemoryValidator,
 } from "./validators.js";
@@ -134,6 +135,26 @@ export default defineSchema({
     sequence: v.number(),
     event: taskActivityEventValidator,
   }).index("by_task_sequence", ["taskId", "sequence"]),
+
+  morningBriefDeliveries: defineTable({
+    ownerId: v.string(),
+    localDate: v.string(),
+    deliveryKey: v.string(),
+    timeZone: v.string(),
+    scheduledLocalTime: v.string(),
+    status: v.union(v.literal("prepared"), v.literal("completed_noop")),
+    payload: morningBriefDeliveryPayloadValidator,
+    preparedAt: v.string(),
+    receipt: v.optional(
+      v.object({
+        adapter: v.literal("noop"),
+        completedAt: v.string(),
+        externalMessageId: v.null(),
+      }),
+    ),
+  })
+    .index("by_delivery_key", ["deliveryKey"])
+    .index("by_owner_date", ["ownerId", "localDate"]),
 
   relationshipMemories: defineTable({
     ownerId: v.string(),

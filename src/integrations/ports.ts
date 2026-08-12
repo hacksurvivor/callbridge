@@ -1,4 +1,5 @@
 import type { AuthenticatedActor, CallTaskDraft } from "../domain/model.js";
+import type { MorningBriefDeliveryPayload } from "../domain/morningBriefDelivery.js";
 
 /** Adapter target for WorkOS AuthKit session/JWT verification. */
 export interface IdentityProvider {
@@ -81,4 +82,23 @@ export type OptionGatheringRequest = {
  */
 export interface OptionGatheringGateway {
   start(request: OptionGatheringRequest): Promise<{ externalSessionId: string }>;
+}
+
+export type MorningBriefDeliveryReceipt = {
+  adapter: "noop";
+  completedAt: string;
+  externalMessageId: null;
+};
+
+/**
+ * Server-only delivery boundary. The repository intentionally provides only a
+ * no-op implementation; adding a live provider requires a separate change.
+ */
+export interface MorningBriefDeliveryPort {
+  deliver(input: {
+    deliveryId: string;
+    deliveryKey: string;
+    ownerId: string;
+    payload: MorningBriefDeliveryPayload;
+  }): Promise<MorningBriefDeliveryReceipt>;
 }

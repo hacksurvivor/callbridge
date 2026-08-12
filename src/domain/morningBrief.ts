@@ -58,7 +58,13 @@ export function buildMorningBrief(input: {
   const updates = input.activity
     .filter((event) => {
       const occurredAt = new Date(event.occurredAt);
-      return !Number.isNaN(occurredAt.getTime()) && occurredAt > input.since && occurredAt <= input.now;
+      return (
+        event.summary.trim().length > 0 &&
+        event.summary.length <= 500 &&
+        !Number.isNaN(occurredAt.getTime()) &&
+        occurredAt > input.since &&
+        occurredAt <= input.now
+      );
     })
     .map(({ taskId, taskTitle, summary, occurredAt }) => ({
       kind: "update" as const,
@@ -72,6 +78,8 @@ export function buildMorningBrief(input: {
       const occursAt = new Date(commitment.occursAt);
       return (
         commitment.important &&
+        commitment.summary.trim().length > 0 &&
+        commitment.summary.length <= 500 &&
         !Number.isNaN(occursAt.getTime()) &&
         localDate(occursAt, input.timeZone) === today
       );
