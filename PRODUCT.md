@@ -4,11 +4,11 @@
 
 ## Platform
 
-adaptive mobile, with iPhone behavior and iOS patterns as the current UX reference
+adaptive
 
 ## Stack
 
-The production UI framework remains open. The application data layer is Convex, with authenticated server-side integrations for realtime voice and telephony. Earlier exploration mentioned Expo/React Native; that is not a delivery commitment.
+Expo / React Native ships the adaptive iOS and Android client, with iOS-first interaction quality. The application data layer is Convex, with authenticated server-side integrations for realtime voice and telephony.
 
 ## Users
 
