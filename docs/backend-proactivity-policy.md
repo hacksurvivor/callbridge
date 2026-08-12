@@ -49,6 +49,8 @@ Enable CallBridge to become a useful personal concierge without becoming a noisy
 - The default for an unanswered material question is at most two contextual reminders before the agent pauses and does not take the blocked action.
 - This is not one universal reminder rule. The user can choose a separate policy by question type (required fact, preference, consequential choice, or sensitive disclosure), globally, for a category, or for one task. A policy can set the reminder count, pause the blocked work, allow safe option-gathering, or require an answer before any continuation.
 
+The current domain policy implements the safe defaults: essential facts, consequential choices, and sensitive disclosure requests remind twice then pause; ordinary preferences do not create a reminder burden and permit reversible option gathering. A later persistence layer can apply user, category, and task overrides without changing this decision model.
+
 ## Open policy decisions
 
 - Frequency caps and quiet hours for proactive suggestions.
