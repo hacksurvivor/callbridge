@@ -136,7 +136,7 @@ Ask these one at a time through the coordinator. Later answers may eliminate lat
 ## 6. Explicitly not implemented
 
 - No production UI, Expo/React Native scaffold, SwiftUI code, navigation code, components, design tokens, or automated UI tests.
-- No backend workflow, API contract, database model, authentication, task engine, scheduler, notification service, or audit implementation.
+- The verified backend foundation exists for task drafts, confirmation, sharing, memory, cancellation preparation, activity, quiet-hours preferences, morning-brief preparation, sensitive disclosure, traveler groups, category automation, proactive findings, and post-stay reviews. It remains credential-free and has no deployed scheduler or external provider.
 - No telephony, recording, transcription, translation, provider, messaging, payment, booking, purchasing, credential, or live external connection.
 - No cancellation, fee calculation, reservation mutation, contact attempt, retry, monitoring, or proactive action.
 - No production visual assets, logo, brand identity, palette, typography system, icons, motion system, screenshots, or new visual concepts.
