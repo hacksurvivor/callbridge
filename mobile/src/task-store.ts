@@ -1,4 +1,4 @@
-export type TaskStage = "home" | "draft" | "active" | "decision";
+export type TaskStage = "home" | "draft" | "active" | "decision" | "activity" | "preferences";
 
 export type MobileTask = {
   id: string;
@@ -49,6 +49,18 @@ export class LocalTaskStore {
   stopCurrent(): MobileTask {
     if (!this.task || this.task.stage !== "active") throw new Error("An active task is required");
     this.task = { ...this.task, stopped: true, activity: [...this.task.activity, { title: "Future attempts stopped", detail: "Your existing booking or request was not cancelled." }] };
+    return this.task;
+  }
+
+  retryCurrent(): MobileTask {
+    if (!this.task || this.task.stage !== "active" || this.task.stopped) throw new Error("An active task is required");
+    this.task = {
+      ...this.task,
+      activity: [
+        ...this.task.activity,
+        { title: "Retry scheduled", detail: "I will try the same confirmed number again in 5 minutes." },
+      ],
+    };
     return this.task;
   }
 
