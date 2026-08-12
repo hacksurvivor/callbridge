@@ -5,6 +5,7 @@
   "version": "57.0.14",
   "main": "index.ts",
   "dependencies": {
+    "convex": "^1.43.0",
     "expo": "~57.0.12",
     "expo-haptics": "~57.0.1",
     "expo-image": "~57.0.2",
