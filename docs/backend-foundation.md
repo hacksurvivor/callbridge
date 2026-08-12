@@ -92,6 +92,14 @@ notifications or monitor-only mode. Transcript-disabled task reads redact the
 standalone transcript, voice-note transcript, and screenshot-extracted text.
 No sharing level grants payment, term, purchase, or irreversible authority.
 
+## Traveler groups
+
+Owner-isolated traveler groups provide reusable quick selections such as a
+family, parents travelling together, or a group of friends. They store head
+counts, pets, and requirements classified as `always` or
+`only_when_relevant`. A task uses a copied snapshot rather than a live profile
+link, so changing a saved group cannot mutate a reviewed draft.
+
 ## Cancellation safety
 
 Cancellation is a preparation workflow, not an executor. Unknown terms can only

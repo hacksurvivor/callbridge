@@ -168,6 +168,25 @@ export default defineSchema({
     consumedAt: v.optional(v.string()),
   }).index("by_task_disclosure", ["taskDisclosureKey"]),
 
+  travelerGroups: defineTable({
+    ownerId: v.string(),
+    group: v.object({
+      name: v.string(),
+      adults: v.number(),
+      children: v.number(),
+      infants: v.number(),
+      pets: v.number(),
+      requirements: v.array(
+        v.object({
+          label: v.string(),
+          disclosure: v.union(v.literal("always"), v.literal("only_when_relevant")),
+        }),
+      ),
+    }),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+  }).index("by_owner", ["ownerId"]),
+
   relationshipMemories: defineTable({
     ownerId: v.string(),
     memory: relationshipMemoryValidator,

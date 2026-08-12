@@ -355,3 +355,17 @@ export const deliveryDisclosureKindValidator = v.union(
   v.literal("entry_instructions"),
   v.literal("intercom"),
 );
+
+export const travelerRequirementValidator = v.object({
+  label: v.string(),
+  disclosure: v.union(v.literal("always"), v.literal("only_when_relevant")),
+});
+
+export const travelerGroupValidator = v.object({
+  name: v.string(),
+  adults: v.number(),
+  children: v.number(),
+  infants: v.number(),
+  pets: v.number(),
+  requirements: v.array(travelerRequirementValidator),
+});
