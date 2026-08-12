@@ -198,6 +198,17 @@ export default defineSchema({
     updatedAt: v.string(),
   }).index("by_owner_category", ["ownerCategoryKey"]).index("by_owner", ["ownerId"]),
 
+  proactiveFindings: defineTable({
+    taskId: v.id("callTasks"),
+    ownerId: v.string(),
+    summary: v.string(),
+    source: v.string(),
+    expiresAt: v.optional(v.string()),
+    state: v.union(v.literal("proposed"), v.literal("approved"), v.literal("dismissed"), v.literal("expired")),
+    createdAt: v.string(),
+    decidedAt: v.optional(v.string()),
+  }).index("by_task", ["taskId"]).index("by_owner", ["ownerId"]),
+
   relationshipMemories: defineTable({
     ownerId: v.string(),
     memory: relationshipMemoryValidator,
