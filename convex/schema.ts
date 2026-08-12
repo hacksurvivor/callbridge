@@ -209,6 +209,16 @@ export default defineSchema({
     decidedAt: v.optional(v.string()),
   }).index("by_task", ["taskId"]).index("by_owner", ["ownerId"]),
 
+  postStayReviews: defineTable({
+    ownerId: v.string(),
+    taskId: v.id("callTasks"),
+    rating: v.optional(v.number()),
+    liked: v.optional(v.string()),
+    disliked: v.optional(v.string()),
+    note: v.optional(v.string()),
+    createdAt: v.string(),
+  }).index("by_task", ["taskId"]).index("by_owner", ["ownerId"]),
+
   relationshipMemories: defineTable({
     ownerId: v.string(),
     memory: relationshipMemoryValidator,
