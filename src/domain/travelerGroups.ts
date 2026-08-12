@@ -44,3 +44,7 @@ export function taskDetailsFromTravelerGroup(group: TravelerGroup): Record<strin
       .map((item) => item.label),
   };
 }
+
+export function snapshotTravelerGroup(group: TravelerGroup): TravelerGroup {
+  return structuredClone(validateTravelerGroup(group));
+}

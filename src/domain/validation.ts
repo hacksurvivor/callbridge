@@ -205,6 +205,24 @@ export const callTaskDraftSchema = z.object({
     .refine((value) => Object.keys(value).length <= 80, {
       message: "At most 80 task detail fields are allowed",
     }),
+  travelerGroupSnapshot: z
+    .object({
+      name: nonBlank.max(100),
+      adults: z.number().int().min(0).max(30),
+      children: z.number().int().min(0).max(30),
+      infants: z.number().int().min(0).max(30),
+      pets: z.number().int().min(0).max(30),
+      requirements: z.array(
+        z.object({
+          label: nonBlank.max(300),
+          disclosure: z.enum(["always", "only_when_relevant"]),
+        }),
+      ).max(30),
+    })
+    .refine((group) => group.adults + group.children + group.infants >= 1, {
+      message: "Traveler group snapshot needs at least one person",
+    })
+    .optional(),
   dateResolution: dateResolutionSchema.optional(),
   deliveryInstructions: z
     .object({

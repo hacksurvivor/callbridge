@@ -171,6 +171,18 @@ export type CallTaskDraft = {
   sources: SourceMaterial;
   target: TaskTarget;
   details: Record<string, TaskDetailValue>;
+  /** Immutable-at-confirmation copy of the group selected for this task. */
+  travelerGroupSnapshot?: {
+    name: string;
+    adults: number;
+    children: number;
+    infants: number;
+    pets: number;
+    requirements: Array<{
+      label: string;
+      disclosure: "always" | "only_when_relevant";
+    }>;
+  };
   dateResolution?: DateResolution;
   deliveryInstructions?: DeliveryInstructions;
   questions: string[];

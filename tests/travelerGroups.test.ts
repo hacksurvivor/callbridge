@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { taskDetailsFromTravelerGroup, validateTravelerGroup } from "../src/domain/travelerGroups.js";
+import { snapshotTravelerGroup, taskDetailsFromTravelerGroup, validateTravelerGroup } from "../src/domain/travelerGroups.js";
 
 describe("traveler groups", () => {
   const family = { name: "Family", adults: 4, children: 2, infants: 1, pets: 0, requirements: [
@@ -11,5 +11,10 @@ describe("traveler groups", () => {
   });
   it("rejects an empty group", () => {
     expect(() => validateTravelerGroup({ ...family, adults: 0, children: 0, infants: 0 })).toThrow("at least one");
+  });
+  it("copies a selected group so later edits cannot change the task snapshot", () => {
+    const snapshot = snapshotTravelerGroup(family);
+    family.requirements[0]!.label = "Changed later";
+    expect(snapshot.requirements[0]!.label).toBe("Accessible room");
   });
 });

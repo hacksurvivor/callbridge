@@ -131,6 +131,21 @@ export const callTaskDraftValidator = v.object({
     address: v.optional(v.string()),
   }),
   details: v.record(v.string(), detailValueValidator),
+  travelerGroupSnapshot: v.optional(
+    v.object({
+      name: v.string(),
+      adults: v.number(),
+      children: v.number(),
+      infants: v.number(),
+      pets: v.number(),
+      requirements: v.array(
+        v.object({
+          label: v.string(),
+          disclosure: v.union(v.literal("always"), v.literal("only_when_relevant")),
+        }),
+      ),
+    }),
+  ),
   dateResolution: v.optional(dateResolutionValidator),
   deliveryInstructions: v.optional(
     v.object({
