@@ -5,6 +5,7 @@ export type MobileTask = {
   request: string;
   stage: Exclude<TaskStage, "home">;
   activity: Array<{ title: string; detail: string; emphasis?: boolean }>;
+  stopped?: boolean;
 };
 
 /**
@@ -40,8 +41,14 @@ export class LocalTaskStore {
   }
 
   prepareDecision(): MobileTask {
-    if (!this.task || this.task.stage !== "active") throw new Error("An active task is required");
+    if (!this.task || this.task.stage !== "active" || this.task.stopped) throw new Error("An active task is required");
     this.task = { ...this.task, stage: "decision" };
+    return this.task;
+  }
+
+  stopCurrent(): MobileTask {
+    if (!this.task || this.task.stage !== "active") throw new Error("An active task is required");
+    this.task = { ...this.task, stopped: true, activity: [...this.task.activity, { title: "Future attempts stopped", detail: "Your existing booking or request was not cancelled." }] };
     return this.task;
   }
 
