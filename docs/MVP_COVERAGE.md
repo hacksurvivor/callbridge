@@ -17,12 +17,15 @@ is grounded in code, tests, or an explicit external gate.
 | Traveler groups and task snapshots | traveler-groups modules and tests | implemented |
 | Category search versus notification preference | category automation preferences | implemented |
 | Proactive findings | proactive findings approval gate | implemented; no external search adapter |
-| UX information architecture and references | `UX_SPECIFICATION.md`, `PRODUCT.md` | specified; no production client |
+| Expo mobile concierge flow | `mobile/App.tsx`, `mobile/src/task-store.ts`, `mobile/src/convex-client.ts` | implemented as a local, no-side-effect preview; typechecked and visually reviewed |
+| Mobile activity, cancellation, retry, stop and disclosure controls | `mobile/App.tsx` | implemented as safe local UI; live mutation requires configured Convex/auth/provider integration |
+| UX information architecture and references | `UX_SPECIFICATION.md`, `PRODUCT.md` | specified and represented in mobile preview; product validation remains ongoing |
 | Live voice, telephony, translation, messaging, Gmail/Booking connectors | provider ports only | blocked on provider choices, credentials, and deployment |
 | Client application and visual design system | UX spec only | blocked on platform and visual approval |
 
 ## Verification baseline
 
-Run `npm test`, `npm run build`, and `git diff --check` before integrating any
-new slice. A green local suite does not imply a deployed provider, legal
-recording compliance, checkout, or a live call.
+Run `npm test`, `npm run build`, `npm --prefix mobile run typecheck`, and
+`git diff --check` before integrating any new slice. A green local suite does
+not imply a deployed provider, legal recording compliance, checkout, or a live
+call.

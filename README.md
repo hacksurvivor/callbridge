@@ -29,12 +29,26 @@ confirmed before the server can hand it to a future call agent.
 No provider credentials, HTTP webhook endpoint, checkout, telephony, OpenAI
 session creation, or live deployment is included.
 
+## Mobile preview
+
+`mobile/` is an Expo / React Native client for the approved conversational
+flow: compose a request, review a draft, explicitly confirm a call, follow
+factual activity, then decide whether to call back, amend, or cancel. It also
+includes the first safe controls for retry, stopping future work, sensitive
+courier disclosure, quiet hours, morning briefs, and relationship memory.
+
+It is deliberately a **local preview** until `EXPO_PUBLIC_CONVEX_URL`, an
+authenticated session, and the legal/provider integrations are configured. In
+that mode it cannot call, message, pay, book, or cancel anything externally.
+
 ## Commands
 
 ```sh
 npm install
 npm run build
 npm test
+npm --prefix mobile run typecheck
+npm --prefix mobile run web
 ```
 
 See [the backend design](docs/backend-foundation.md) for the state and
