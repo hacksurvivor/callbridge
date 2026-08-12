@@ -2,13 +2,15 @@ import { StatusBar } from "expo-status-bar";
 import * as Haptics from "expo-haptics";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { LocalTaskStore, type MobileTask, type TaskStage } from "./src/task-store";
 
-type Stage = "home" | "draft" | "active" | "decision";
+const taskStore = new LocalTaskStore();
 
 export default function App() {
-  const [stage, setStage] = useState<Stage>("home");
+  const [stage, setStage] = useState<TaskStage>("home");
   const [request, setRequest] = useState("");
-  const advance = (next: Stage) => {
+  const [task, setTask] = useState<MobileTask | null>(null);
+  const advance = (next: TaskStage) => {
     void Haptics.selectionAsync();
     setStage(next);
   };
@@ -18,10 +20,10 @@ export default function App() {
       <StatusBar style="dark" />
       <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
         <Text style={styles.wordmark}>CallBridge</Text>
-        {stage === "home" && <Home request={request} setRequest={setRequest} onContinue={() => advance("draft")} />}
-        {stage === "draft" && <Draft request={request} onConfirm={() => advance("active")} onBack={() => advance("home")} />}
-        {stage === "active" && <Active onResult={() => advance("decision")} />}
-        {stage === "decision" && <Decision onDone={() => advance("home")} />}
+        {stage === "home" && <Home request={request} setRequest={setRequest} onContinue={() => { setTask(taskStore.createDraft(request)); advance("draft"); }} />}
+        {stage === "draft" && task && <Draft request={task.request} onConfirm={() => { setTask(taskStore.confirmCurrent()); advance("active"); }} onBack={() => advance("home")} />}
+        {stage === "active" && task && <Active task={task} onResult={() => { setTask(taskStore.prepareDecision()); advance("decision"); }} />}
+        {stage === "decision" && <Decision onDone={() => { taskStore.clear(); setTask(null); setRequest(""); advance("home"); }} />}
       </ScrollView>
     </View>
   );
@@ -35,7 +37,7 @@ function Home({ request, setRequest, onContinue }: { request: string; setRequest
 }
 
 function Draft({ request, onConfirm, onBack }: { request: string; onConfirm: () => void; onBack: () => void }) { return <View style={styles.stack}><Text style={styles.title}>Here’s the draft</Text><Text style={styles.subtle}>Nothing will be sent or called until you confirm.</Text><View style={styles.card}><Text style={styles.cardLabel}>I’ll ask about</Text><Text style={styles.cardTitle} selectable>{request}</Text><Text style={styles.cardDetail}>• comparable options{`\n`}• total price and terms{`\n`}• availability in the local language</Text></View><View style={styles.notice}><Text style={styles.noticeTitle}>You stay in control</Text><Text style={styles.noticeText}>I can gather options. I can’t book, pay, or accept terms.</Text></View><Pressable accessibilityRole="button" style={styles.primary} onPress={onConfirm}><Text style={styles.primaryText}>Confirm call</Text></Pressable><Pressable accessibilityRole="button" style={styles.secondary} onPress={onBack}><Text style={styles.secondaryText}>Edit draft</Text></Pressable></View>; }
-function Active({ onResult }: { onResult: () => void }) { return <View style={styles.stack}><Text style={styles.title}>Working on it</Text><Text style={styles.subtle}>You can follow along. The translated transcript is available when you need it.</Text><View style={styles.feed}><Feed text="Checking the hotel details" meta="Just now" /><Feed text="Reception answered" meta="Thai · translated live" strong /><Feed text="Comparing two available room options" meta="Waiting for the final price" /></View><Pressable accessibilityRole="button" style={styles.primary} onPress={onResult}><Text style={styles.primaryText}>Show result</Text></Pressable><Pressable accessibilityRole="button" style={styles.stop}><Text style={styles.stopText}>Stop future attempts</Text></Pressable></View>; }
+function Active({ task, onResult }: { task: MobileTask; onResult: () => void }) { return <View style={styles.stack}><Text style={styles.title}>Working on it</Text><Text style={styles.subtle}>You can follow along. The translated transcript is available when you need it.</Text><View style={styles.feed}>{task.activity.map((item) => <Feed key={item.title} text={item.title} meta={item.detail} strong={item.emphasis} />)}</View><Pressable accessibilityRole="button" style={styles.primary} onPress={onResult}><Text style={styles.primaryText}>Show result</Text></Pressable><Pressable accessibilityRole="button" style={styles.stop}><Text style={styles.stopText}>Stop future attempts</Text></Pressable></View>; }
 function Decision({ onDone }: { onDone: () => void }) { return <View style={styles.stack}><Text style={styles.title}>A good option is ready</Text><View style={styles.card}><Text style={styles.cardLabel}>Hotel response</Text><Text style={styles.cardTitle}>Family room · 2 nights</Text><Text style={styles.price}>$240 total</Text><Text style={styles.cardDetail}>Taxes included · free cancellation until 18:00 tomorrow</Text></View><Text style={styles.subtle}>The hotel is waiting. I won’t confirm anything without you.</Text><Pressable accessibilityRole="button" style={styles.primary} onPress={onDone}><Text style={styles.primaryText}>Confirm and call back</Text></Pressable><Pressable accessibilityRole="button" style={styles.secondary}><Text style={styles.secondaryText}>Change or discuss</Text></Pressable></View>; }
 function Chip({ text, onPress }: { text: string; onPress: () => void }) { return <Pressable onPress={onPress} style={styles.chip}><Text style={styles.chipText}>{text}</Text></Pressable>; }
 function Feed({ text, meta, strong }: { text: string; meta: string; strong?: boolean }) { return <View style={[styles.feedItem, strong && styles.feedStrong]}><Text style={styles.feedText}>{text}</Text><Text style={styles.feedMeta}>{meta}</Text></View>; }
