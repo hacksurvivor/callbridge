@@ -384,3 +384,9 @@ export const travelerGroupValidator = v.object({
   pets: v.number(),
   requirements: v.array(travelerRequirementValidator),
 });
+
+export const categoryAutomationPreferenceValidator = v.object({
+  category: taskCategoryValidator,
+  backgroundSearchEnabled: v.boolean(),
+  notificationsEnabled: v.boolean(),
+});

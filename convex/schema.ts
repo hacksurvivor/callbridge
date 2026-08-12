@@ -187,6 +187,17 @@ export default defineSchema({
     updatedAt: v.string(),
   }).index("by_owner", ["ownerId"]),
 
+  categoryAutomationPreferences: defineTable({
+    ownerId: v.string(),
+    ownerCategoryKey: v.string(),
+    preference: v.object({
+      category: v.union(v.literal("accommodation"), v.literal("restaurant"), v.literal("service"), v.literal("transport"), v.literal("delivery"), v.literal("marketplace"), v.literal("property"), v.literal("vehicle"), v.literal("other")),
+      backgroundSearchEnabled: v.boolean(),
+      notificationsEnabled: v.boolean(),
+    }),
+    updatedAt: v.string(),
+  }).index("by_owner_category", ["ownerCategoryKey"]).index("by_owner", ["ownerId"]),
+
   relationshipMemories: defineTable({
     ownerId: v.string(),
     memory: relationshipMemoryValidator,
