@@ -161,3 +161,11 @@ This credential-free scaffold uses Convex's generic function builders so it can
 typecheck before a deployment is configured. After a project is configured,
 `npx convex codegen` can replace those imports with the generated builders for
 schema-specific database types.
+
+The Expo client uses manually typed public function references while codegen is
+unavailable. Its remote task gateway can create a draft, confirm its exact
+revision, and stop future retries through `callTasks:create`,
+`callTasks:confirm`, and `retries:stop`. It requires both a configured Convex
+URL and an explicit remote-sync runtime flag; server-side identity still comes
+only from a verified WorkOS session. The client does not call internal
+functions or invoke providers.

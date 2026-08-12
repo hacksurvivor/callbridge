@@ -37,9 +37,11 @@ factual activity, then decide whether to call back, amend, or cancel. It also
 includes the first safe controls for retry, stopping future work, sensitive
 courier disclosure, quiet hours, morning briefs, and relationship memory.
 
-It is deliberately a **local preview** until `EXPO_PUBLIC_CONVEX_URL`, an
-authenticated session, and the legal/provider integrations are configured. In
-that mode it cannot call, message, pay, book, or cancel anything externally.
+It is deliberately a **local preview** until `EXPO_PUBLIC_CONVEX_URL`, a
+verified WorkOS-backed authenticated session, and
+`EXPO_PUBLIC_ENABLE_REMOTE_SYNC=true` are configured. A URL alone never turns
+on mobile writes. In preview mode it cannot call, message, pay, book, or
+cancel anything externally.
 
 ## Commands
 
