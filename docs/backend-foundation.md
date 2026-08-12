@@ -77,6 +77,11 @@ Each task selects exactly one retention mode:
 No-save mode requires a separate acknowledgement in the revision-bound
 confirmation before option gathering can start.
 
+The retention policy derives deletion from a completed task's trip end date
+when present, otherwise from completion time. Saved context lasts 30 days and
+may receive bounded extensions; no-save context is immediately eligible for
+purge. A live scheduled deletion job remains a deployment-time integration.
+
 ## Household and task sharing
 
 Convex models owner-isolated households, verified-email invite acceptance,
