@@ -6,6 +6,7 @@ export type MobileTask = {
   stage: Exclude<TaskStage, "home">;
   activity: Array<{ title: string; detail: string; emphasis?: boolean }>;
   stopped?: boolean;
+  remote?: { id: string; revision: number; state: "syncing" | "synced" | "failed"; message?: string };
 };
 
 /**
@@ -49,6 +50,30 @@ export class LocalTaskStore {
   stopCurrent(): MobileTask {
     if (!this.task || this.task.stage !== "active") throw new Error("An active task is required");
     this.task = { ...this.task, stopped: true, activity: [...this.task.activity, { title: "Future attempts stopped", detail: "Your existing booking or request was not cancelled." }] };
+    return this.task;
+  }
+
+  markRemoteCreated(id: string): MobileTask {
+    if (!this.task) throw new Error("A task is required");
+    this.task = { ...this.task, remote: { id, revision: 1, state: "synced" } };
+    return this.task;
+  }
+
+  markRemoteConfirmed(): MobileTask {
+    if (!this.task?.remote) throw new Error("A synced task is required");
+    this.task = { ...this.task, remote: { ...this.task.remote, revision: this.task.remote.revision + 1, state: "synced" } };
+    return this.task;
+  }
+
+  markRemoteStopped(): MobileTask {
+    if (!this.task?.remote) throw new Error("A synced task is required");
+    this.task = { ...this.task, remote: { ...this.task.remote, revision: this.task.remote.revision + 1, state: "synced" } };
+    return this.task;
+  }
+
+  markRemoteFailure(message: string): MobileTask {
+    if (!this.task) throw new Error("A task is required");
+    this.task = { ...this.task, remote: { id: this.task.remote?.id ?? "", revision: this.task.remote?.revision ?? 0, state: "failed", message } };
     return this.task;
   }
 
