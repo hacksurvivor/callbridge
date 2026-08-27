@@ -136,13 +136,27 @@ Only a successfully verified Lemon Squeezy event can reach
 `EntitlementEventStore.applyOnce`. Convex stores processed event IDs and applies
 subscription state idempotently.
 
-`OptionGatheringGateway` is the future server-side realtime/telephony adapter
-target. The port remains provider-neutral and can receive a future fallback
-selection. The launch default is `openai_realtime` with
-`gpt-realtime-2.1-mini`. Its request includes the confirmed revision, the
-single inquiry capability, and an explicit forbidden-action tuple. There is
-deliberately no live adapter, credential lookup, or session creation in this
-repository.
+`OptionGatheringGateway` remains provider-neutral. The launch default is
+`openai_realtime` with `gpt-realtime-2.1-mini`. A durable Convex job wraps the
+gateway boundary: the worker checks the global external-effects flag and
+capability requirements before reserving a task, sends only to a configured
+HTTPS adapter with an idempotency key, retries twice at five-minute intervals,
+and accepts results only through an HMAC-signed callback matching the job,
+session and reserved revision. This repository still has no concrete PSTN
+adapter, provider credentials, or direct OpenAI session creation.
+
+Translated transcripts received from that callback are tenant-checked and
+share-permission checked. No-save tasks never persist them; saved transcripts
+use the task retention deadline and are removed by the maintenance purge.
+
+Lemon Squeezy has an HTTP route that verifies the untouched body with HMAC
+before invoking the idempotent entitlement mutation. Billing writes also
+require the global effects flag and webhook secret.
+
+The five-minute maintenance cron prepares idempotent morning briefs, queues
+post-stay review prompts, purges expired raw context and schedules bounded job
+retries. Notifications use an outbox and registered Expo tokens; the delivery
+worker stays inert unless the global effects flag and Expo access token are set.
 
 ## Convex boundary
 
@@ -167,5 +181,6 @@ unavailable. Its remote task gateway can create a draft, confirm its exact
 revision, and stop future retries through `callTasks:create`,
 `callTasks:confirm`, and `retries:stop`. It requires both a configured Convex
 URL and an explicit remote-sync runtime flag; server-side identity still comes
-only from a verified WorkOS session. The client does not call internal
-functions or invoke providers.
+only from a verified WorkOS session. The explicit confirmation flow can request
+the public start mutation, but only the server worker can invoke a provider and
+every external effect still passes the independent runtime gates.

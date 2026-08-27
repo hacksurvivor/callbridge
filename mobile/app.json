@@ -24,7 +24,16 @@
     "plugins": [
       "expo-router",
       "expo-status-bar",
-      "expo-image"
-    ]
+      "expo-image",
+      "expo-notifications",
+      "expo-secure-store"
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "312e1e2c-2a64-47f1-b32f-b707a9c808dd"
+      }
+    },
+    "owner": "ai_appdev"
   }
 }

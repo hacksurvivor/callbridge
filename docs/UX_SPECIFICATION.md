@@ -1,6 +1,7 @@
 # CallBridge UX Specification
 
-Status: discovery consolidated; production UI and visual-world approval are pending.
+Status: interaction discovery consolidated; an Expo integration prototype exists;
+production UI and visual-world approval are pending.
 
 This document is the canonical interaction specification for the current iOS UX target. It records confirmed product decisions only. Mobbin references are functional evidence, not permission to copy another product's brand or visual identity.
 
@@ -124,7 +125,7 @@ No surface has approved visual composition, palette, typography, iconography, mo
 Ask these one at a time through the coordinator. Later answers may eliminate later questions.
 
 1. **Launch wedge:** Is the first release limited to hotel/travel calls, as the README states, or must it launch across Travel, Restaurants, Marketplace, Services, Property, and Delivery?
-2. **Platform and delivery:** Is the first production client iOS-only, or an adaptive iOS/Android product, and is Expo/React Native the approved implementation stack?
+2. **Platform and delivery — resolved for engineering:** adaptive Expo / React Native with iOS-first interaction quality. Final launch-platform scope remains a release decision.
 3. **Live authority:** During a live call, which decisions may CallBridge make without interrupting, and which exact changes to price, timing, terms, substitution, or commitment always require approval?
 4. **Transaction boundary:** In the first release, may CallBridge complete a reservation or purchase after approval, or may it only present confirmed options and leave the final transaction outside the product?
 5. **Unknown cancellation consequence:** If a provider cannot state the fee before contact, may CallBridge call only to learn the consequence, or must cancellation stop until the consequence is independently known?
@@ -135,11 +136,15 @@ Ask these one at a time through the coordinator. Later answers may eliminate lat
 
 ## 6. Explicitly not implemented
 
-- No production UI, Expo/React Native scaffold, SwiftUI code, navigation code, components, design tokens, or automated UI tests.
-- The verified backend foundation exists for task drafts, confirmation, sharing, memory, cancellation preparation, activity, quiet-hours preferences, morning-brief preparation, sensitive disclosure, traveler groups, category automation, proactive findings, and post-stay reviews. It remains credential-free and has no deployed scheduler or external provider.
-- No telephony, recording, transcription, translation, provider, messaging, payment, booking, purchasing, credential, or live external connection.
-- No cancellation, fee calculation, reservation mutation, contact attempt, retry, monitoring, or proactive action.
+- No production UI or automated UI test suite. The Expo app is an integration prototype; mock attachment, transcript and result surfaces are explicitly labelled.
+- The backend includes WorkOS auth configuration, scheduled maintenance, retention purge, notification outbox/push worker, signed billing/telephony webhooks, durable provider jobs, translated-transcript storage, retry handling, and a legal destination gate. These run in the Convex development deployment with all external effects disabled.
+- OpenAI and WorkOS development credentials are configured. A fail-closed PSTN
+  worker and read-only Gmail OAuth adapter exist, but Cloudflare deployment and
+  Google client/consent are still gated. There is no live provider session,
+  Booking partner credentials, payment checkout, booking/purchasing executor, or
+  production connection.
+- No cancellation executor or authority beyond `gather_options_only`.
 - No production visual assets, logo, brand identity, palette, typography system, icons, motion system, screenshots, or new visual concepts.
 - No approved visual composition for any screen; the earlier scratchpad concept is non-production exploration and is not a committed artifact in this repository.
 - No claim that Mobbin contains direct Codex or Qood native-app evidence; only inspected analogues are cited.
-- No resolution of the nine open decisions above.
+- The platform implementation question is resolved for engineering. Remaining launch, authority, transaction, legal-consent, family and memory-policy decisions require product/legal approval before live effects are enabled.

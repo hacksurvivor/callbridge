@@ -27,6 +27,7 @@ export type LemonSqueezyEntitlementEvent = {
   externalCustomerId: string;
   externalSubscriptionId: string;
   status: string;
+  plan?: string | null;
   renewsAt: string | null;
   endsAt: string | null;
   userId: string;

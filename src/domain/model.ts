@@ -50,6 +50,8 @@ export type TaskTarget = {
   name?: string;
   contacts: TaskContact[];
   address?: string;
+  /** ISO 3166-1 alpha-2 destination country, required before live dispatch. */
+  countryCode?: string;
 };
 
 export type Money = {
@@ -260,6 +262,11 @@ export type CallTask = {
     startedAt: string;
   };
   failureReason?: string;
+  completedAt?: string;
+  retentionDeleteAt?: string;
+  postStayReviewPromptAt?: string;
+  postStayReviewPromptQueuedAt?: string;
+  purgedAt?: string;
   createdAt: string;
   updatedAt: string;
 };

@@ -1,4 +1,4 @@
-export type TaskStage = "home" | "draft" | "active" | "decision" | "activity" | "preferences";
+export type TaskStage = "home" | "draft" | "active" | "transcript" | "decision" | "activity" | "mac" | "preferences";
 
 export type MobileTask = {
   id: string;

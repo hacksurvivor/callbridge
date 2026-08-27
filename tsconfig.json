@@ -11,5 +11,5 @@
     "skipLibCheck": true,
     "types": ["node", "vitest/globals"]
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts", "convex/**/*.ts"]
+  "include": ["src/**/*.ts", "shared/**/*.ts", "tests/**/*.ts", "convex/**/*.ts"]
 }

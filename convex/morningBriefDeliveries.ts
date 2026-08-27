@@ -177,3 +177,27 @@ export const recordNoopReceipt = internalMutation({
     return "recorded" as const;
   },
 });
+
+export const markQueued = internalMutation({
+  args: {
+    deliveryId: v.id("morningBriefDeliveries"),
+    ownerId: v.string(),
+    notificationId: v.id("notificationOutbox"),
+  },
+  returns: v.union(v.literal("queued"), v.literal("duplicate")),
+  handler: async (ctx, args) => {
+    const delivery = await ctx.db.get("morningBriefDeliveries", args.deliveryId);
+    if (!delivery) throw new ConvexError({ code: "NOT_FOUND" });
+    if (delivery.ownerId !== args.ownerId) throw new ConvexError({ code: "FORBIDDEN" });
+    if (delivery.queuedNotificationId) return "duplicate" as const;
+    const notification = await ctx.db.get("notificationOutbox", args.notificationId);
+    if (!notification || notification.ownerId !== args.ownerId || notification.kind !== "morning_brief") {
+      throw new ConvexError({ code: "INVALID_NOTIFICATION" });
+    }
+    await ctx.db.patch("morningBriefDeliveries", args.deliveryId, {
+      status: "queued",
+      queuedNotificationId: args.notificationId,
+    });
+    return "queued" as const;
+  },
+});

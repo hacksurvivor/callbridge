@@ -1,0 +1,27 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "callbridge-telephony",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-13",
+  "workers_dev": true,
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
+  "vars": {
+    "EXTERNAL_EFFECTS_ENABLED": "false",
+    "OPENAI_REALTIME_MODEL": "gpt-realtime-2.1-mini",
+    "OPENAI_SUMMARY_MODEL": "gpt-5.4-mini",
+    "CALLBRIDGE_BLOCKED_CALL_COUNTRIES": "CU,IR,KP,SY",
+    "CALLBRIDGE_MANUAL_REVIEW_COUNTRIES": "BY,RU",
+    "CALLBRIDGE_GEO_PERMISSION_MODE": "just_in_time_low_risk",
+    "CALLBRIDGE_MAX_PSTN_RATE_USD": "2.00",
+    "CALLBRIDGE_MAX_PSTN_CALL_USD": "6.00",
+    "CALLBACK_URL": "https://graceful-cormorant-438.eu-west-1.convex.site/webhooks/inquiry-worker"
+  },
+  "durable_objects": {
+    "bindings": [
+      { "name": "CALL_SESSIONS", "class_name": "CallSession" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["CallSession"] }
+  ]
+}

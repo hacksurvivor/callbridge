@@ -6,7 +6,7 @@ export type RemoteCallTaskDraft = {
   category: "accommodation" | "restaurant" | "service" | "transport" | "delivery" | "marketplace" | "property" | "vehicle" | "other";
   title: string;
   sources: { typedContext: string };
-  target: { contacts: Array<never> };
+  target: { contacts: Array<never>; countryCode?: string };
   details: Record<string, string | number | boolean | string[]>;
   questions: string[];
   userLanguage: string;
@@ -42,6 +42,7 @@ export type RemoteCallTaskDraft = {
 const createTask = makeFunctionReference<"mutation", { draft: RemoteCallTaskDraft }, string>("callTasks:create");
 const confirmTask = makeFunctionReference<"mutation", { taskId: string; expectedRevision: number; noSaveModeAcknowledged: boolean }, string>("callTasks:confirm");
 const stopTask = makeFunctionReference<"mutation", { taskId: string }, string>("retries:stop");
+const requestOptionGathering = makeFunctionReference<"mutation", { taskId: string }, string>("optionGatheringRequests:requestStart");
 
 /**
  * Remote task state is opt-in until a deployed Convex project and an
@@ -115,5 +116,8 @@ export const convexTaskGateway = {
   },
   async stop(taskId: string): Promise<string> {
     return await remoteClient().mutation(stopTask, { taskId });
+  },
+  async requestStart(taskId: string): Promise<string> {
+    return await remoteClient().mutation(requestOptionGathering, { taskId });
   },
 };

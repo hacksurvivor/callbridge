@@ -199,6 +199,7 @@ export const callTaskDraftSchema = z.object({
     name: nonBlank.max(300).optional(),
     contacts: z.array(taskContactSchema).max(20),
     address: nonBlank.max(500).optional(),
+    countryCode: z.string().regex(/^[A-Z]{2}$/).optional(),
   }),
   details: z
     .record(z.string().regex(/^[A-Za-z][A-Za-z0-9_]{0,63}$/), detailValueSchema)

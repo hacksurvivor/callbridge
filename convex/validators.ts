@@ -129,6 +129,7 @@ export const callTaskDraftValidator = v.object({
       }),
     ),
     address: v.optional(v.string()),
+    countryCode: v.optional(v.string()),
   }),
   details: v.record(v.string(), detailValueValidator),
   travelerGroupSnapshot: v.optional(
@@ -278,6 +279,11 @@ export const callTaskDocumentValidator = v.object({
     }),
   ),
   failureReason: v.optional(v.string()),
+  completedAt: v.optional(v.string()),
+  retentionDeleteAt: v.optional(v.string()),
+  postStayReviewPromptAt: v.optional(v.string()),
+  postStayReviewPromptQueuedAt: v.optional(v.string()),
+  purgedAt: v.optional(v.string()),
   createdAt: v.string(),
   updatedAt: v.string(),
 });
@@ -291,6 +297,30 @@ export const friendlyPermissionLevelValidator = v.union(
 export const historyVisibilityValidator = v.union(
   v.literal("full_history"),
   v.literal("new_updates_only"),
+);
+
+export const remoteCommandKindValidator = v.union(
+  v.literal("agent_task"),
+  v.literal("status"),
+  v.literal("pause_history"),
+  v.literal("resume_history"),
+  v.literal("summarize_recent"),
+);
+
+export const remoteCommandStatusValidator = v.union(
+  v.literal("pending"),
+  v.literal("running"),
+  v.literal("cancellation_requested"),
+  v.literal("succeeded"),
+  v.literal("failed"),
+  v.literal("cancelled"),
+);
+
+export const remoteCommandEventKindValidator = v.union(
+  v.literal("status"),
+  v.literal("output"),
+  v.literal("warning"),
+  v.literal("result"),
 );
 
 export const notificationPreferenceValidator = v.union(

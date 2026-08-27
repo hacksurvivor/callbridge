@@ -4,6 +4,12 @@ dist/
 .expo/
 .convex/
 coverage/
+.build/
+*.tsbuildinfo
+
+# TypeScript-emitted Vite config artifacts
+web/vite.config.js
+web/vite.config.d.ts
 
 # Local configuration and secrets
 .env
@@ -15,3 +21,4 @@ coverage/
 .DS_Store
 .idea/
 .vscode/
+.gstack/
