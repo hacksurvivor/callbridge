@@ -46,6 +46,44 @@ const taskSnapshotValidator = v.object({
   updatedAt: v.string(),
 });
 
+const inquiryProofReceiptValidator = v.object({
+  schemaVersion: v.literal(1),
+  taskId: v.string(),
+  attemptId: v.string(),
+  executionRevision: v.string(),
+  outcome: v.union(
+    v.literal("answered"),
+    v.literal("partial"),
+    v.literal("no_answer"),
+    v.literal("failed"),
+    v.literal("stopped"),
+  ),
+  callLanguage: v.string(),
+  resultLanguage: v.string(),
+  answeredQuestionIds: v.array(v.string()),
+  unresolvedQuestionIds: v.array(v.string()),
+  sourceEventIds: v.array(v.string()),
+  durationSeconds: v.number(),
+  terminalReason: v.union(
+    v.literal("completed"),
+    v.literal("remote_hangup"),
+    v.literal("no_answer"),
+    v.literal("provider_failure"),
+    v.literal("user_cancelled"),
+    v.literal("user_ended"),
+    v.literal("connected_timeout"),
+    v.literal("recipient_declined"),
+  ),
+  disclosureStatus: v.union(v.literal("delivered"), v.literal("not_observed"), v.literal("failed")),
+  commitmentSafety: v.union(v.literal("none_observed"), v.literal("possible_violation")),
+  terminalAt: v.string(),
+  cost: v.object({
+    currency: v.string(),
+    status: v.union(v.literal("provider_reported"), v.literal("pending")),
+    actualMinorUnits: v.union(v.number(), v.null()),
+  }),
+});
+
 const expireConfirmationIntentRef = makeFunctionReference<
   "mutation",
   { intentId: Id<"inquiryConfirmationIntents"> },
@@ -297,20 +335,29 @@ async function requireDestinationSafety(
   }
 
   const cutoff = new Date(Date.now() - ABUSE_WINDOW_MS).toISOString();
-  const [ownerWindow, destinationWindow] = await Promise.all([
+  const countedDispatchStates = ["accepted", "creation_uncertain"] as const;
+  const ownerWindows = await Promise.all(countedDispatchStates.map((dispatchState) => (
     ctx.db
       .query("inquiryAttempts")
-      .withIndex("by_owner_created_at", (q) => q.eq("ownerId", ownerId).gte("createdAt", cutoff))
-      .take(MAX_CALLS_PER_USER_WINDOW),
+      .withIndex("by_owner_dispatch_created_at", (q) => q
+        .eq("ownerId", ownerId)
+        .eq("dispatchState", dispatchState)
+        .gte("createdAt", cutoff))
+      .take(MAX_CALLS_PER_USER_WINDOW)
+  )));
+  const destinationWindows = await Promise.all(countedDispatchStates.map((dispatchState) => (
     ctx.db
       .query("inquiryAttempts")
-      .withIndex("by_destination_created_at", (q) => q.eq("destinationE164", destinationE164).gte("createdAt", cutoff))
-      .take(MAX_CALLS_PER_DESTINATION_WINDOW),
-  ]);
-  if (ownerWindow.length >= MAX_CALLS_PER_USER_WINDOW) {
+      .withIndex("by_destination_dispatch_created_at", (q) => q
+        .eq("destinationE164", destinationE164)
+        .eq("dispatchState", dispatchState)
+        .gte("createdAt", cutoff))
+      .take(MAX_CALLS_PER_DESTINATION_WINDOW)
+  )));
+  if (ownerWindows.reduce((total, attempts) => total + attempts.length, 0) >= MAX_CALLS_PER_USER_WINDOW) {
     throw new ConvexError({ code: "USER_RATE_LIMITED", retryAfterSeconds: 60 * 60 });
   }
-  if (destinationWindow.length >= MAX_CALLS_PER_DESTINATION_WINDOW) {
+  if (destinationWindows.reduce((total, attempts) => total + attempts.length, 0) >= MAX_CALLS_PER_DESTINATION_WINDOW) {
     throw new ConvexError({ code: "DESTINATION_RATE_LIMITED", retryAfterSeconds: 60 * 60 });
   }
 }
@@ -1440,11 +1487,8 @@ export const getResult = query({
     }),
     v.object({
       status: v.literal("ready"),
-      taskId: v.string(),
-      attemptId: v.string(),
-      actualCostMinorUnits: v.number(),
-      costStatus: v.union(v.literal("provider_reported"), v.literal("pending")),
       result: inquiryCallResultValidator,
+      receipt: inquiryProofReceiptValidator,
     }),
   ),
   handler: async (ctx, args) => {
@@ -1455,14 +1499,38 @@ export const getResult = query({
       .withIndex("by_task", (q) => q.eq("taskId", task._id))
       .unique();
     if (stored) {
+      const answeredQuestionIds = stored.result.answers
+        .filter(({ status }) => status === "reported")
+        .map(({ questionId }) => questionId);
+      const sourceEventIds = [...new Set(stored.result.answers.flatMap(({ evidence }) => (
+        evidence ? [evidence.sourceEventId] : []
+      )))].sort();
       return {
-          status: "ready" as const,
+        status: "ready" as const,
+        result: stored.result,
+        receipt: {
+          schemaVersion: 1 as const,
           taskId: String(stored.taskId),
           attemptId: String(stored.attemptId),
-          actualCostMinorUnits: stored.actualCostMinorUnits,
-          costStatus: stored.costStatus,
-          result: stored.result,
-        };
+          executionRevision: stored.result.executionRevision,
+          outcome: stored.result.outcome,
+          callLanguage: task.contract.languages.call,
+          resultLanguage: task.contract.languages.result,
+          answeredQuestionIds,
+          unresolvedQuestionIds: stored.result.unresolvedQuestionIds,
+          sourceEventIds,
+          durationSeconds: stored.result.durationSeconds,
+          terminalReason: stored.result.terminalReason,
+          disclosureStatus: stored.result.disclosureStatus,
+          commitmentSafety: stored.result.commitmentSafety,
+          terminalAt: stored.result.terminalAt,
+          cost: {
+            currency: task.contract.costCeiling.currency,
+            status: stored.costStatus,
+            actualMinorUnits: stored.costStatus === "pending" ? null : stored.actualCostMinorUnits,
+          },
+        },
+      };
     }
     if (task.resultState === "processing") return { status: "processing" as const, retryAfterMs: 500 };
     if (task.resultState === "failed") {
@@ -1496,11 +1564,11 @@ export const listEvents = query({
     await requireOwnedTask(ctx, args.taskId, ownerId);
     const events = await ctx.db
       .query("inquiryEvents")
-      .withIndex("by_task_sequence", (q) => q.eq("taskId", args.taskId))
+      .withIndex("by_task_sequence", (q) => q
+        .eq("taskId", args.taskId)
+        .gt("sequence", args.afterSequence ?? 0))
       .collect();
-    return events
-      .filter(({ sequence }) => sequence > (args.afterSequence ?? 0))
-      .map(({ eventId, sequence, type, source, revision, executionRevision, occurredAt, questionId }) => ({
+    return events.map(({ eventId, sequence, type, source, revision, executionRevision, occurredAt, questionId }) => ({
         eventId,
         sequence,
         type,

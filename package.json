@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:web": "npm --prefix web test",
     "test:telephony": "npm --prefix telephony-worker test",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "verify:submission": "node scripts/verify-submission.mjs"
   },
   "dependencies": {
     "convex": "1.43.0",

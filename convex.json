@@ -3,14 +3,22 @@
   "authKit": {
     "dev": {
       "configure": {
-        "redirectUris": ["http://localhost:8081/callback"],
-        "appHomepageUrl": "http://localhost:8081",
-        "corsOrigins": ["http://localhost:8081"]
+        "redirectUris": [
+          "https://callbridge-web.pages.dev/callback",
+          "http://localhost:5173/callback",
+          "http://localhost:8081/callback"
+        ],
+        "appHomepageUrl": "https://callbridge-web.pages.dev",
+        "corsOrigins": [
+          "https://callbridge-web.pages.dev",
+          "http://localhost:5173",
+          "http://localhost:8081"
+        ]
       },
       "localEnvVars": {
         "WORKOS_CLIENT_ID": "${authEnv.WORKOS_CLIENT_ID}",
         "WORKOS_API_KEY": "${authEnv.WORKOS_API_KEY}",
-        "WORKOS_REDIRECT_URI": "http://localhost:8081/callback"
+        "WORKOS_REDIRECT_URI": "https://callbridge-web.pages.dev/callback"
       }
     }
   }

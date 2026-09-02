@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" role="img" aria-labelledby="title description">
+  <title id="title">Controlled provider late-arrival policy</title>
+  <description id="description">A labeled fixture showing a provider response that late arrivals are possible with advance notice.</description>
+  <rect width="1200" height="720" rx="32" fill="#f7f7f5"/>
+  <rect x="70" y="58" width="1060" height="604" rx="24" fill="#ffffff" stroke="#deded9" stroke-width="2"/>
+  <text x="120" y="132" font-family="Arial, sans-serif" font-size="24" fill="#8a8a84" letter-spacing="2">CONTROLLED FIXTURE · NOT LIVE PROVIDER EVIDENCE</text>
+  <text x="120" y="214" font-family="Arial, sans-serif" font-size="48" font-weight="700" fill="#202123">Late arrival policy</text>
+  <line x1="120" y1="252" x2="1080" y2="252" stroke="#e8e8e3" stroke-width="2"/>
+  <text x="120" y="330" font-family="Arial, sans-serif" font-size="31" fill="#343541">Arrivals after midnight are available.</text>
+  <text x="120" y="386" font-family="Arial, sans-serif" font-size="31" fill="#343541">Please share the expected arrival window in advance.</text>
+  <rect x="120" y="458" width="520" height="86" rx="18" fill="#f1f1ee"/>
+  <circle cx="166" cy="501" r="14" fill="#10a37f"/>
+  <text x="196" y="512" font-family="Arial, sans-serif" font-size="26" font-weight="700" fill="#202123">Captured safely for the demo</text>
+  <text x="120" y="612" font-family="Arial, sans-serif" font-size="22" fill="#8a8a84">No credentials, tokens, or private session data are present.</text>
+</svg>

@@ -35,9 +35,9 @@ export const HOTEL_INQUIRY_GOLDEN_FIXTURE = {
     ],
   },
   disclosure: {
-    id: "ai-assistant-ja-v2",
+    id: "callbridge-disclosure-ja-v1",
     locale: "ja-JP",
-    text: "This is an AI assistant calling for a user. Speech is transcribed, audio is not recorded, and minimal structured evidence is retained temporarily.",
+    text: "これはユーザーに代わって電話をしているAIアシスタントです。会話は文字起こしされ、音声は録音されません。必要最小限の構造化された証拠のみが一時的に保持されます。",
     requiredClaims: [...INQUIRY_REQUIRED_DISCLOSURE_CLAIMS],
   },
   playbook: {

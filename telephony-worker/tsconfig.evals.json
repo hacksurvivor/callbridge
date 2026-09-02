@@ -1,0 +1,7 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node", "vitest/globals", "@cloudflare/workers-types"]
+  },
+  "include": ["evals/**/*.ts", "src/inquiryExtraction.ts", "src/inquiryRealtime.ts", "src/inquiryResult.ts", "../shared/**/*.ts"]
+}

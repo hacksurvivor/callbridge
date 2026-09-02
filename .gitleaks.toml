@@ -1,0 +1,14 @@
+title = "CallBridge gitleaks configuration"
+
+[[allowlists]]
+description = "Local Convex runtime state is generated and gitignored"
+paths = ['''(^|/)\.convex/''']
+
+[[allowlists]]
+description = "Deterministic non-secret test idempotency fixtures"
+regexTarget = "match"
+regexes = [
+  '''reconcile-(?:found|absent)-0001''',
+  '''result-publish-0001''',
+  '''access_token=abc123456789''',
+]

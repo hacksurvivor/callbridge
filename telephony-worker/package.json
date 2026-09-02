@@ -5,14 +5,19 @@
   "type": "module",
   "scripts": {
     "build": "tsc --noEmit",
+    "build:evals": "tsc -p tsconfig.evals.json --noEmit",
     "test": "vitest run --pool=threads --maxWorkers=1",
+    "eval:live": "node evals/run-live-evals.mjs",
+    "eval:verify-manifest": "node evals/run-live-evals.mjs --verify",
     "deploy": "wrangler deploy",
     "deploy:dry": "wrangler deploy --dry-run"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260813.1",
+    "@types/ws": "^8.18.1",
     "typescript": "^7.0.0",
     "vitest": "^4.1.10",
-    "wrangler": "^4.122.0"
+    "wrangler": "^4.122.0",
+    "ws": "^8.21.3"
   }
 }

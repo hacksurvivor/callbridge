@@ -1,4 +1,10 @@
-# CallBridge design direction
+# Historical mobile design direction
+
+> This document records the pre-WebMCP native-mobile visual direction. It is not
+> the source of truth for the hackathon submission. The current web-first product,
+> safety, proof, and judge-flow decisions are documented in
+> [`docs/SUBMISSION.md`](docs/SUBMISSION.md) and the production web source under
+> `web/`. Preserve this history; do not use it to redesign the approved web UI.
 
 ## Intent
 

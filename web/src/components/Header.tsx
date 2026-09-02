@@ -9,7 +9,7 @@ export function Header() {
       </div>
       <div className="topbar-actions">
         <span className="chatgpt-status"><span className="status-dot" />Working with ChatGPT</span>
-        <span className="avatar" aria-label="Signed in as Maya Lee">ML</span>
+        <span className="avatar" aria-label="CallBridge account">CB</span>
       </div>
     </header>
   );

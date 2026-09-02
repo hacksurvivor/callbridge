@@ -6,6 +6,7 @@ import { makeFunctionReference } from "convex/server";
 import { describe, expect, it } from "vitest";
 
 import type { InquiryCallContract } from "../shared/inquiryContracts.js";
+import { INQUIRY_ACCEPTANCE_SCENARIOS } from "../shared/inquiryAcceptanceFixtures.js";
 import { HOTEL_INQUIRY_GOLDEN_FIXTURE } from "../shared/inquiryFixtures.js";
 import type { InquiryCallResult } from "../shared/inquiryState.js";
 import schema from "./schema.js";
@@ -25,6 +26,9 @@ const approvePlaybook = makeFunctionReference<"mutation">("inquiries:approvePlay
 const recordWorkerEvent = makeFunctionReference<"mutation">("inquiries:recordWorkerEvent");
 const claimDispatch = makeFunctionReference<"mutation">("inquiryDispatch:claimDispatch");
 const recordDispatchAccepted = makeFunctionReference<"mutation">("inquiryDispatch:recordDispatchAccepted");
+const recordDispatchDefinitelyNotCreated = makeFunctionReference<"mutation">(
+  "inquiryDispatch:recordDispatchDefinitelyNotCreated",
+);
 const publishResult = makeFunctionReference<"mutation">("inquiries:publishResult");
 const settleResultCost = makeFunctionReference<"mutation">("inquiries:settleResultCost");
 const getResult = makeFunctionReference<"query">("inquiries:getResult");
@@ -480,7 +484,10 @@ describe("general inquiry Convex state", () => {
       idempotencyKey: "intent-active-limit-2",
     })).rejects.toMatchObject({ data: { code: "ACTIVE_CALL_LIMIT" } });
 
-    await t.run(async (ctx) => ctx.db.patch("inquiryAttempts", firstConfirmed.attemptId, { status: "failed" }));
+    await t.run(async (ctx) => ctx.db.patch("inquiryAttempts", firstConfirmed.attemptId, {
+      status: "failed",
+      dispatchState: "accepted",
+    }));
     for (let index = 2; index <= 3; index += 1) {
       const created = index === 2 ? second : await t.mutation(createDraft, {
         idempotencyKey: `create-destination-limit-${index}`,
@@ -488,7 +495,10 @@ describe("general inquiry Convex state", () => {
       });
       if (index !== 2) await priceDraft(t, created);
       const confirmed = await confirmDraft(t, created, `destination-limit-${index}`);
-      await t.run(async (ctx) => ctx.db.patch("inquiryAttempts", confirmed.attemptId, { status: "failed" }));
+      await t.run(async (ctx) => ctx.db.patch("inquiryAttempts", confirmed.attemptId, {
+        status: "failed",
+        dispatchState: "accepted",
+      }));
     }
     const fourth = await t.mutation(createDraft, {
       idempotencyKey: "create-destination-limit-4",
@@ -501,6 +511,44 @@ describe("general inquiry Convex state", () => {
       expectedExecutionRevision: fourth.executionRevision,
       idempotencyKey: "intent-destination-limit-4",
     })).rejects.toMatchObject({ data: { code: "DESTINATION_RATE_LIMITED" } });
+  });
+
+  it("does not rate-limit attempts proven definitely not created", async () => {
+    const t = authenticated();
+    await giveCredits(t);
+    for (let index = 1; index <= 3; index += 1) {
+      const created = await t.mutation(createDraft, {
+        idempotencyKey: `create-definite-absence-${index}`,
+        contract: contractWithoutPlaybook(),
+      });
+      await priceDraft(t, created);
+      const confirmed = await confirmDraft(t, created, `definite-absence-${index}`);
+      const lease = await t.mutation(claimDispatch, {
+        taskId: created.taskId,
+        attemptId: confirmed.attemptId,
+        expectedExecutionRevision: created.executionRevision,
+        claimIdempotencyKey: `claim-definite-absence-${index}`,
+      });
+      await t.mutation(recordDispatchDefinitelyNotCreated, {
+        taskId: created.taskId,
+        attemptId: confirmed.attemptId,
+        leaseToken: lease.leaseToken,
+        failureCode: "TEST_PROVIDER_REJECTED",
+        occurredAt: new Date().toISOString(),
+      });
+    }
+
+    const fourth = await t.mutation(createDraft, {
+      idempotencyKey: "create-after-definite-absence",
+      contract: contractWithoutPlaybook(),
+    });
+    await priceDraft(t, fourth);
+    await expect(t.mutation(createConfirmationIntent, {
+      taskId: fourth.taskId,
+      expectedRevision: fourth.revision,
+      expectedExecutionRevision: fourth.executionRevision,
+      idempotencyKey: "intent-after-definite-absence",
+    })).resolves.toMatchObject({ executionRevision: fourth.executionRevision });
   });
 
   it("requires explicit approval for user-created playbooks and resets it after edits", async () => {
@@ -737,12 +785,26 @@ describe("general inquiry Convex state", () => {
       ...args,
       actualCostMinorUnits: 124,
     })).rejects.toMatchObject({ data: { code: "IDEMPOTENCY_CONFLICT" } });
-    await expect(t.query(getResult, { taskId: created.taskId })).resolves.toMatchObject({
-      taskId: created.taskId,
-      actualCostMinorUnits: 123,
-      costStatus: "provider_reported",
+    const published = await t.query(getResult, { taskId: created.taskId });
+    expect(published).toMatchObject({
+      status: "ready",
       result: { outcome: "answered", unresolvedQuestionIds: [] },
+      receipt: {
+        taskId: created.taskId,
+        attemptId: confirmed.attemptId,
+        outcome: "answered",
+        answeredQuestionIds: created.contract.questions.map((question: { id: string }) => question.id),
+        unresolvedQuestionIds: [],
+        cost: { currency: "USD", status: "provider_reported", actualMinorUnits: 123 },
+      },
     });
+    if (published.status !== "ready") throw new Error("Expected a published result receipt.");
+    expect(published.receipt.sourceEventIds).toEqual(
+      created.contract.questions.map((_: unknown, index: number) => `worker-event-${index + 1}`).sort(),
+    );
+    expect(JSON.stringify(published.receipt)).not.toMatch(
+      /"(?:destinationE164|provider|transcript|audio|privateBackground)"/u,
+    );
     await expect(t.query(getCreditBalance, { currency: "USD" })).resolves.toEqual({
       currency: "USD",
       balanceMinorUnits: 877,
@@ -754,6 +816,9 @@ describe("general inquiry Convex state", () => {
       events.map((_: unknown, index: number) => index + 1),
     );
     expect(events.at(-1)).toMatchObject({ type: "result_ready", executionRevision: created.executionRevision });
+    const cursor = events.at(-2)!.sequence;
+    const tail = await t.query(listEvents, { taskId: created.taskId, afterSequence: cursor });
+    expect(tail.map(({ sequence }: { sequence: number }) => sequence)).toEqual([events.at(-1)!.sequence]);
 
     const otherUser = base.withIdentity({ subject: "other_result_user" });
     await expect(otherUser.query(getResult, { taskId: created.taskId })).rejects.toMatchObject({
@@ -805,6 +870,10 @@ describe("general inquiry Convex state", () => {
       costStatus: "pending",
       result: answeredResult(created.contract, created.executionRevision),
     });
+    await expect(t.query(getResult, { taskId: created.taskId })).resolves.toMatchObject({
+      status: "ready",
+      receipt: { cost: { currency: "USD", status: "pending", actualMinorUnits: null } },
+    });
     await expect(t.query(getCreditBalance, { currency: "USD" })).resolves.toEqual({
       currency: "USD",
       balanceMinorUnits: 1_000,
@@ -824,8 +893,8 @@ describe("general inquiry Convex state", () => {
     await expect(t.mutation(settleResultCost, settlement)).resolves.toEqual({ duplicate: false });
     await expect(t.mutation(settleResultCost, settlement)).resolves.toEqual({ duplicate: true });
     await expect(t.query(getResult, { taskId: created.taskId })).resolves.toMatchObject({
-      actualCostMinorUnits: 145,
-      costStatus: "provider_reported",
+      status: "ready",
+      receipt: { cost: { currency: "USD", status: "provider_reported", actualMinorUnits: 145 } },
     });
     await expect(t.query(getCreditBalance, { currency: "USD" })).resolves.toEqual({
       currency: "USD",
@@ -835,9 +904,15 @@ describe("general inquiry Convex state", () => {
     });
   });
 
-  it("accepts a signed worker callback stream through result settlement", async () => {
+  it("carries a non-hotel clinic inquiry through signed callbacks and cost settlement", async () => {
     const t = authenticated();
-    const created = await createFundedDraft(t, "create-signed-callback");
+    await giveCredits(t);
+    const clinic = INQUIRY_ACCEPTANCE_SCENARIOS.find(({ id }) => id === "clinic-thailand")!;
+    const created = await t.mutation(createDraft, {
+      idempotencyKey: "create-signed-callback",
+      contract: structuredClone(clinic.contract),
+    });
+    await priceDraft(t, created);
     const confirmed = await confirmDraft(t, created, "signed-callback");
     const lease = await t.mutation(claimDispatch, {
       taskId: created.taskId,
@@ -893,8 +968,18 @@ describe("general inquiry Convex state", () => {
       actualCostMinorUnits: 120,
     })).resolves.toEqual({ kind: "cost", duplicate: false });
     await expect(t.query(getResult, { taskId: created.taskId })).resolves.toMatchObject({
-      actualCostMinorUnits: 120,
-      costStatus: "provider_reported",
+      status: "ready",
+      result: {
+        answers: expect.arrayContaining([
+          expect.objectContaining({ questionId: "documents", status: "reported" }),
+          expect.objectContaining({ questionId: "walk-in", status: "reported" }),
+        ]),
+      },
+      receipt: {
+        callLanguage: clinic.contract.languages.call,
+        resultLanguage: clinic.contract.languages.result,
+        cost: { currency: "USD", status: "provider_reported", actualMinorUnits: 120 },
+      },
     });
   });
 });

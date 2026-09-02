@@ -5,9 +5,9 @@ Updated: 2026-08-27
 ## Current stage
 
 The repository is a deployed development technical-alpha foundation. Convex dev,
-WorkOS Staging, OpenAI Realtime credentials and the EAS project are configured.
-No external effect is enabled, no production deployment exists, and no live call
-has been made.
+WorkOS Staging, the public Cloudflare Pages WebMCP app, the fail-closed telephony
+Worker, OpenAI Realtime credentials and the EAS project are configured. No external
+effect is enabled and no live call has been made.
 
 ## Completed locally
 
@@ -41,6 +41,11 @@ has been made.
 - EAS project linked; Expo server token, notification native module and explicit
   registration helper added.
 - Country/policy/transcription/retention gate deployed fail-closed.
+- Authenticated production-mode web bundle deployed at `https://callbridge-web.pages.dev`;
+  AuthKit initiation and the exact HTTPS callback configuration were browser-verified.
+- Twilio Media Streams to OpenAI Realtime Worker deployed with provider credentials,
+  policy configuration, and `EXTERNAL_EFFECTS_ENABLED=false` verified by its live
+  health and authenticated dispatch endpoints.
 - Isolated Twilio `CallBridge` subaccount and calls-create-only API key configured.
 - Twilio Media Streams to OpenAI Realtime Cloudflare Worker implemented and dry-run validated; provider effects default off.
 - Google Cloud `CallBridge` project and Gmail API created; read-only OAuth callback
@@ -49,8 +54,8 @@ has been made.
 ## Remaining external activation gates
 
 1. Select a Twilio number country and approve the exact phone-number price before purchase.
-2. Complete Cloudflare SSO and authorize the minimal Wrangler scopes, then deploy
-   the concrete Twilio-to-OpenAI outbound bridge behind the HTTPS dispatch contract.
+2. Complete one authenticated, disclosed, consenting controlled PSTN call through
+   the deployed web/Convex/Worker path and reconcile its exact provider cost.
 3. Approve launch countries and call/transcription disclosure and retention wording; then populate the policy gate.
 4. Configure APNs/FCM and register a real device token; the Expo server token is configured.
 5. Complete Lemon Squeezy 2FA, then create the store/products/checkout and set the webhook secret.

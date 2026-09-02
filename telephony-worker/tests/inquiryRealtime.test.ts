@@ -8,6 +8,7 @@ import {
   buildRealtimeSessionUpdate,
   classifyAutomatedTurn,
   type InquiryDispatchRequest,
+  type InquiryRealtimeSnapshot,
 } from "../src/inquiryRealtime.js";
 
 const request: InquiryDispatchRequest = {
@@ -19,6 +20,49 @@ const request: InquiryDispatchRequest = {
   dispatchIdempotencyKey: "dispatch_1",
   contract: HOTEL_INQUIRY_GOLDEN_FIXTURE,
 };
+
+const romanianRequest: InquiryDispatchRequest = {
+  ...request,
+  taskId: "task_ro",
+  attemptId: "attempt_ro",
+  dispatchIdempotencyKey: "dispatch_ro",
+  contract: {
+    ...HOTEL_INQUIRY_GOLDEN_FIXTURE,
+    destination: {
+      ...HOTEL_INQUIRY_GOLDEN_FIXTURE.destination,
+      displayName: "Romanian canary recipient",
+      e164PhoneNumber: "+66831092872",
+      countryCode: "TH",
+    },
+    objective: "Obține informații despre patru aspecte ale conversației de test.",
+    questions: [
+      { id: "available", prompt: "Este un moment potrivit pentru conversație?", required: true },
+      { id: "audio-clear", prompt: "Mă auziți clar?", required: true },
+      { id: "language", prompt: "În ce limbă preferați să continuăm?", required: true },
+      { id: "anything-else", prompt: "Este altceva relevant pentru această solicitare?", required: true },
+    ],
+    languages: { call: "ro-RO", result: "en" },
+    disclosure: {
+      ...HOTEL_INQUIRY_GOLDEN_FIXTURE.disclosure,
+      id: "callbridge-disclosure-ro-v1",
+      locale: "ro-RO",
+      text: "Sunt un asistent AI care sună în numele unui utilizator. Conversația este transcrisă, dar sunetul nu este înregistrat.",
+    },
+  },
+};
+
+function deliverOpening(controller: InquiryRealtimeController, input = request): void {
+  controller.sessionConfigured(input);
+  controller.assistantTranscript(
+    `${input.contract.disclosure.text} Sun pentru a obține câteva informații.`,
+    input,
+    2_000,
+  );
+  const commands = controller.responseFinished(input, "MZ_1");
+  const name = (commands[0] as { payload?: { mark?: { name?: string } } } | undefined)?.payload?.mark?.name;
+  expect(name).toBeTruthy();
+  expect(controller.twilioMarkReceived(name!, 2_100)).toBe(true);
+}
 
 describe("general inquiry Realtime policy", () => {
   it("uses the generalized contract and keeps the exact disclosure first", () => {
@@ -41,6 +85,12 @@ describe("general inquiry Realtime policy", () => {
         audio: {
           input: {
             format: { type: "audio/pcmu" },
+            transcription: {
+              model: "gpt-4o-transcribe",
+              language: "ja",
+              prompt: expect.any(String),
+            },
+            noise_reduction: { type: "near_field" },
             turn_detection: {
               type: "server_vad",
               create_response: false,
@@ -78,16 +128,33 @@ describe("general inquiry Realtime policy", () => {
 });
 
 describe("general inquiry Realtime controller", () => {
-  it("waits for a classified human turn before delivering the disclosure", () => {
+  it("starts the exact disclosure once Realtime confirms the session, without waiting for recipient speech", () => {
     const controller = new InquiryRealtimeController({ request, connectedAtMs: 1_000 });
-    expect(controller.providerTranscript("Hello?", request)).toEqual([
+    expect(controller.sessionConfigured(request)).toEqual([
       expect.objectContaining({ channel: "openai", payload: expect.objectContaining({ type: "response.create" }) }),
     ]);
+    expect(controller.sessionConfigured(request)).toEqual([]);
     expect(controller.snapshot()).toMatchObject({
       phase: "waiting_for_recipient",
       disclosureDelivered: false,
       responseActive: true,
+      initialOpeningRequested: true,
+      awaitingRecipientSinceMs: null,
     });
+  });
+
+  it("does not queue a duplicate opening when recipient speech wins the session-ready race", () => {
+    const controller = new InquiryRealtimeController({ request, connectedAtMs: 1_000 });
+    expect(controller.providerTranscript("Hello?", request, 1_010)).toEqual([
+      expect.objectContaining({ channel: "openai", payload: expect.objectContaining({ type: "response.create" }) }),
+    ]);
+    expect(controller.sessionConfigured(request)).toEqual([]);
+    expect(controller.snapshot()).toMatchObject({
+      initialOpeningRequested: true,
+      pendingOpeningResponse: false,
+      responseActive: true,
+    });
+    expect(controller.responseFinished(request)).toEqual([]);
   });
 
   it("clears queued Twilio audio and truncates the actually heard assistant item on barge-in", () => {
@@ -140,6 +207,38 @@ describe("general inquiry Realtime controller", () => {
     ]);
   });
 
+  it("replays an interrupted approved disclosure prefix instead of hanging up", () => {
+    const controller = new InquiryRealtimeController({ request, connectedAtMs: 1_000 });
+    controller.sessionConfigured(request);
+    controller.responseStarted();
+    controller.assistantItemAdded("item_1");
+    controller.assistantAudioSent(btoa("x".repeat(8_000)), 1_100);
+    controller.recipientSpeechStarted("MZ_1", 1_500);
+
+    const partialDisclosure = request.contract.disclosure.text.slice(0, 42).trim();
+    expect(controller.assistantTranscript(partialDisclosure, request, 1_510)).toEqual([]);
+    expect(controller.snapshot()).toMatchObject({
+      disclosureDelivered: false,
+      disclosureResponseInterrupted: true,
+      pendingOpeningResponse: true,
+      hangupRequested: false,
+    });
+    expect(controller.responseFinished(request, "MZ_1")).toEqual([
+      expect.objectContaining({ channel: "openai", payload: expect.objectContaining({ type: "response.create" }) }),
+    ]);
+  });
+
+  it("still fails closed when an interrupted opening is not an approved disclosure prefix", () => {
+    const controller = new InquiryRealtimeController({ request, connectedAtMs: 1_000 });
+    controller.sessionConfigured(request);
+    controller.responseStarted();
+    controller.recipientSpeechStarted("MZ_1", 1_500);
+
+    expect(controller.assistantTranscript("Hello, I am calling about a hotel.", request, 1_510)).toEqual([
+      { channel: "control", action: "hangup", reason: "disclosure_failure" },
+    ]);
+  });
+
   it("allows normal classified turns only after disclosure delivery", () => {
     const controller = new InquiryRealtimeController({ request, connectedAtMs: 1_000 });
     controller.providerTranscript("Hello?", request);
@@ -161,9 +260,99 @@ describe("general inquiry Realtime controller", () => {
     ]);
     expect(controller.twilioMarkReceived("disclosure:attempt_1:1", 2_100)).toBe(true);
     expect(controller.providerTranscript("Yes, arrivals after midnight are allowed.", request)).toEqual([
-      { channel: "openai", payload: { type: "response.create" } },
+      {
+        channel: "openai",
+        payload: expect.objectContaining({
+          type: "response.create",
+          response: expect.objectContaining({
+            instructions: expect.stringContaining("What is the latest check-in time?"),
+          }),
+        }),
+      },
     ]);
     expect(controller.snapshot()).toMatchObject({ phase: "active", disclosureDelivered: true });
+  });
+
+  it("advances after a substantive transcript even when Romanian yes is misheard as Download", () => {
+    const controller = new InquiryRealtimeController({ request: romanianRequest, connectedAtMs: 1_000 });
+    deliverOpening(controller, romanianRequest);
+    expect(controller.snapshot().questionProgress[0]).toMatchObject({ status: "asked", askCount: 1 });
+
+    const secondQuestion = controller.providerTranscript("Download", romanianRequest, 2_200);
+    const secondInstructions = JSON.stringify(secondQuestion);
+    expect(secondInstructions).toContain("Mă auziți clar?");
+    expect(secondInstructions).not.toContain("Este un moment potrivit pentru conversație?");
+    expect(controller.snapshot().activeQuestionId).toBe("audio-clear");
+    expect(controller.snapshot().questionProgress.slice(0, 2)).toEqual([
+      { questionId: "available", status: "answered", askCount: 1, clarificationCount: 0 },
+      { questionId: "audio-clear", status: "asked", askCount: 1, clarificationCount: 0 },
+    ]);
+
+    controller.responseFinished(romanianRequest, "MZ_1");
+    controller.providerTranscript("Da, foarte clar.", romanianRequest, 2_300);
+    controller.responseFinished(romanianRequest, "MZ_1");
+    controller.providerTranscript("Română.", romanianRequest, 2_400);
+    controller.responseFinished(romanianRequest, "MZ_1");
+    const completion = controller.providerTranscript("Nu, nimic altceva.", romanianRequest, 2_500);
+    expect(JSON.stringify(completion)).toContain("All approved questions are now answered or unavailable");
+    expect(controller.snapshot().questionProgress.every(({ status }) => status === "answered")).toBe(true);
+
+    controller.assistantTranscript("Vă mulțumesc. La revedere.", romanianRequest, 2_600);
+    const mark = controller.responseFinished(romanianRequest, "MZ_1");
+    const markName = (mark[0] as { payload?: { mark?: { name?: string } } } | undefined)?.payload?.mark?.name;
+    expect(markName).toBe("completion:attempt_ro:1");
+    expect(controller.completionMarkReceived(markName!)).toEqual([
+      { channel: "control", action: "hangup", reason: "completed" },
+    ]);
+  });
+
+  it("clarifies one question only once, then marks it unavailable and advances", () => {
+    const controller = new InquiryRealtimeController({ request: romanianRequest, connectedAtMs: 1_000 });
+    deliverOpening(controller, romanianRequest);
+
+    const clarification = controller.providerTranscript("Poftim?", romanianRequest, 2_200);
+    expect(JSON.stringify(clarification)).toContain("Rephrase only that question once");
+    expect(controller.snapshot().questionProgress[0]).toMatchObject({
+      status: "asked",
+      askCount: 2,
+      clarificationCount: 1,
+    });
+
+    controller.responseFinished(romanianRequest, "MZ_1");
+    const advance = controller.providerTranscript("Poftim?", romanianRequest, 2_300);
+    expect(JSON.stringify(advance)).toContain("Mă auziți clar?");
+    expect(JSON.stringify(advance)).not.toContain("Este un moment potrivit pentru conversație?");
+    expect(controller.snapshot().questionProgress.slice(0, 2)).toEqual([
+      { questionId: "available", status: "unavailable", askCount: 2, clarificationCount: 1 },
+      { questionId: "audio-clear", status: "asked", askCount: 1, clarificationCount: 0 },
+    ]);
+  });
+
+  it("restores older snapshots without dialogue progress fields", () => {
+    const current = new InquiryRealtimeController({ request, connectedAtMs: 1_000 }).snapshot();
+    const {
+      questionProgress: _questionProgress,
+      activeQuestionId: _activeQuestionId,
+      activeDialoguePlan: _activeDialoguePlan,
+      pendingDialoguePlan: _pendingDialoguePlan,
+      completionResponseRequested: _completionResponseRequested,
+      pendingCompletionMarkName: _pendingCompletionMarkName,
+      nextCompletionMarkSequence: _nextCompletionMarkSequence,
+      ...legacySnapshot
+    } = current;
+    const restored = new InquiryRealtimeController({
+      request,
+      connectedAtMs: 1_000,
+      snapshot: legacySnapshot as InquiryRealtimeSnapshot,
+    });
+    expect(restored.snapshot()).toMatchObject({
+      activeQuestionId: null,
+      completionResponseRequested: false,
+      pendingCompletionMarkName: null,
+      nextCompletionMarkSequence: 1,
+    });
+    expect(restored.snapshot().questionProgress).toHaveLength(request.contract.questions.length);
+    expect(restored.snapshot().questionProgress.every(({ status }) => status === "unasked")).toBe(true);
   });
 
   it("does not let a stale playback mark satisfy a retried disclosure", () => {

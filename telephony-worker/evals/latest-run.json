@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "completedAt": "2026-08-27T08:24:05.646Z",
+  "sourceDigest": {
+    "algorithm": "sha256",
+    "value": "5abac09d611f58ed200a427f8eb44b3019fd0e2a7500d5eb27b2d3529611e6df"
+  },
+  "digestFiles": [
+    "telephony-worker/package.json",
+    "telephony-worker/package-lock.json",
+    "telephony-worker/evals/run-live-evals.mjs",
+    "telephony-worker/evals/evalSupport.ts",
+    "telephony-worker/evals/inquiry-agent-v1.eval.test.ts",
+    "telephony-worker/evals/inquiry-result-v1.eval.test.ts",
+    "telephony-worker/src/inquiryRealtime.ts",
+    "telephony-worker/src/inquiryExtraction.ts",
+    "telephony-worker/src/inquiryResult.ts",
+    "shared/inquiryContracts.ts",
+    "shared/inquiryDispatchContracts.ts",
+    "shared/inquiryAcceptanceFixtures.ts"
+  ],
+  "models": {
+    "realtimeRequested": "gpt-realtime-2.1-mini",
+    "realtimeServerReportedConstraint": "contains:gpt-realtime-2.1-mini",
+    "extractionRequested": "gpt-5.4-mini",
+    "extractionServerReportedConstraint": "contains:gpt-5.4-mini",
+    "judgeRequested": "gpt-5.4-mini"
+  },
+  "suites": [
+    { "id": "inquiry-agent-v1", "casesPerRun": 6 },
+    { "id": "inquiry-result-v1", "casesPerRun": 7 }
+  ],
+  "consecutiveRuns": [
+    { "startedAt": "2026-08-27T08:23:04.776Z", "passed": 13, "failed": 0 },
+    { "startedAt": "2026-08-27T08:23:36.204Z", "passed": 13, "failed": 0 }
+  ],
+  "totalPassingSamples": 26,
+  "modelTextPersisted": false,
+  "credentialPersisted": false,
+  "credentialVariable": "CALLBRIDGE_EVAL_OPENAI_API_KEY"
+}

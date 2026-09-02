@@ -4,12 +4,13 @@ import { ProductionApp } from "./ProductionApp.js";
 import { SimulationApp } from "./SimulationApp.js";
 import { simulationInquiryClient } from "./simulation/inquirySimulation.js";
 import "./styles.css";
+import "./artifact-styles.css";
 import { registerCallBridgeWebMcpTools } from "./webmcp/registerTools.js";
 
 const params = new URLSearchParams(window.location.search);
 const simulation = import.meta.env.DEV || import.meta.env.VITE_CALLBRIDGE_SIMULATION === "true";
-const visualFixture = import.meta.env.DEV && (params.get("visualFixture") === "approved" || params.get("visualFixture") === "result")
-  ? params.get("visualFixture") as "approved" | "result"
+const visualFixture = import.meta.env.DEV && ["approved", "result", "artifacts"].includes(params.get("visualFixture") ?? "")
+  ? params.get("visualFixture") as "approved" | "result" | "artifacts"
   : undefined;
 
 if (simulation) {

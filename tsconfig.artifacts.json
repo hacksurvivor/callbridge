@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "shared/taskArtifacts.ts",
+    "shared/inquiryWebMcp.ts",
+    "convex/schema.ts",
+    "convex/taskArtifacts.ts",
+    "convex/taskArtifacts.test.ts",
+    "tests/taskArtifacts.test.ts"
+  ]
+}

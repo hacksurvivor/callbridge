@@ -34,6 +34,36 @@ export const INQUIRY_REQUIRED_DISCLOSURE_CLAIMS = [
   "minimal_evidence_retention",
 ] as const;
 
+const SERVER_DISCLOSURES: Readonly<Record<string, string>> = {
+  en: "This is an AI assistant calling for a user. Speech is transcribed, audio is not recorded, and minimal structured evidence is retained temporarily.",
+  es: "Soy un asistente de IA que llama en nombre de una persona. La conversación se transcribe, el audio no se graba y solo se conserva temporalmente evidencia estructurada mínima.",
+  hi: "मैं उपयोगकर्ता की ओर से कॉल करने वाला एक एआई सहायक हूँ। बातचीत का लिप्यंतरण होता है, ऑडियो रिकॉर्ड नहीं होता, और न्यूनतम संरचित साक्ष्य अस्थायी रूप से रखा जाता है।",
+  ja: "これはユーザーに代わって電話をしているAIアシスタントです。会話は文字起こしされ、音声は録音されません。必要最小限の構造化された証拠のみが一時的に保持されます。",
+  ka: "მე ვარ ხელოვნური ინტელექტის ასისტენტი და მომხმარებლის სახელით ვრეკავ. საუბარი გადაიწერება ტექსტად, აუდიო არ იწერება და მინიმალური სტრუქტურირებული მტკიცებულება დროებით ინახება.",
+  kk: "Мен пайдаланушы атынан қоңырау шалып тұрған ЖИ көмекшісімін. Сөйлеу мәтінге айналады, аудио жазылмайды және ең аз құрылымдалған дәлел уақытша сақталады.",
+  ro: "Sunt un asistent AI care sună pentru un utilizator. Conversația este transcrisă, sunetul nu este înregistrat, iar dovezile structurate minime sunt păstrate temporar.",
+  ru: "Я — ИИ-ассистент и звоню от имени пользователя. Разговор преобразуется в текст, аудиозапись не ведётся, а минимальные структурированные данные временно сохраняются.",
+  th: "นี่คือผู้ช่วย AI ที่โทรในนามของผู้ใช้ ระบบถอดเสียงการสนทนา ไม่มีการบันทึกเสียง และเก็บหลักฐานแบบมีโครงสร้างเท่าที่จำเป็นไว้ชั่วคราว",
+};
+
+/** User input never controls the words spoken as CallBridge's legal/safety disclosure. */
+export function serverInquiryDisclosure(callLanguage: string): {
+  id: string;
+  locale: string;
+  text: string;
+  requiredClaims: InquiryDisclosureClaim[];
+} {
+  const requested = callLanguage.trim();
+  const base = requested.split("-")[0]?.toLowerCase() ?? "en";
+  const supported = SERVER_DISCLOSURES[base] ? base : "en";
+  return {
+    id: `callbridge-disclosure-${supported}-v1`,
+    locale: supported === "en" && base !== "en" ? "en" : requested,
+    text: SERVER_DISCLOSURES[supported]!,
+    requiredClaims: [...INQUIRY_REQUIRED_DISCLOSURE_CLAIMS],
+  };
+}
+
 export type InquiryForbiddenAction = (typeof INQUIRY_FORBIDDEN_ACTIONS)[number];
 export type InquiryDisclosureClaim = (typeof INQUIRY_REQUIRED_DISCLOSURE_CLAIMS)[number];
 export type InquiryExecutionRevision = `${typeof INQUIRY_EXECUTION_REVISION_PREFIX}${string}`;
@@ -178,10 +208,7 @@ export const inquiryCallContractSchema = z
   })
   .transform((contract) => ({
     ...contract,
-    disclosure: {
-      ...contract.disclosure,
-      requiredClaims: [...INQUIRY_REQUIRED_DISCLOSURE_CLAIMS],
-    },
+    disclosure: serverInquiryDisclosure(contract.languages.call),
     policy: {
       ...contract.policy,
       forbiddenActions: [...INQUIRY_FORBIDDEN_ACTIONS],

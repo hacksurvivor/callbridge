@@ -118,8 +118,10 @@ export default defineSchema({
     .index("by_owner_confirm_key", ["ownerConfirmKey"])
     .index("by_owner_status", ["ownerId", "status"])
     .index("by_owner_created_at", ["ownerId", "createdAt"])
+    .index("by_owner_dispatch_created_at", ["ownerId", "dispatchState", "createdAt"])
     .index("by_destination_status", ["destinationE164", "status"])
     .index("by_destination_created_at", ["destinationE164", "createdAt"])
+    .index("by_destination_dispatch_created_at", ["destinationE164", "dispatchState", "createdAt"])
     .index("by_external_call_id", ["externalCallId"]),
 
   inquiryRecipientOptOuts: defineTable({
@@ -225,6 +227,89 @@ export default defineSchema({
   })
     .index("by_playbook_key", ["playbookKey"])
     .index("by_owner", ["ownerId"]),
+
+  taskArtifacts: defineTable({
+    ownerId: v.string(),
+    taskId: v.id("inquiryTasks"),
+    createIdempotencyKey: v.string(),
+    createdSequence: v.number(),
+    lastEventSequence: v.number(),
+    revision: v.number(),
+    type: v.union(
+      v.literal("conversation"),
+      v.literal("auth_required"),
+      v.literal("user_question"),
+      v.literal("evidence"),
+    ),
+    status: v.union(
+      v.literal("active"),
+      v.literal("resolved"),
+      v.literal("superseded"),
+      v.literal("failed"),
+    ),
+    visibility: v.literal("owner"),
+    source: v.union(
+      v.literal("chatgpt"),
+      v.literal("callbridge_server"),
+      v.literal("channel_adapter"),
+      v.literal("user"),
+    ),
+    payload: v.any(),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+  })
+    .index("by_owner_create_key", ["ownerId", "createIdempotencyKey"])
+    .index("by_owner_task_created", ["ownerId", "taskId", "createdSequence"])
+    .index("by_task_created", ["taskId", "createdSequence"])
+    .index("by_task_event", ["taskId", "lastEventSequence"])
+    .index("by_task_status", ["taskId", "status"]),
+
+  taskArtifactEvents: defineTable({
+    ownerId: v.string(),
+    taskId: v.id("inquiryTasks"),
+    artifactId: v.id("taskArtifacts"),
+    eventId: v.string(),
+    idempotencyKey: v.string(),
+    sequence: v.number(),
+    artifactRevision: v.number(),
+    eventType: v.union(
+      v.literal("created"),
+      v.literal("updated"),
+      v.literal("user_responded"),
+      v.literal("authorization_resolved"),
+      v.literal("provider_message_observed"),
+      v.literal("evidence_attached"),
+    ),
+    source: v.union(
+      v.literal("chatgpt"),
+      v.literal("callbridge_server"),
+      v.literal("channel_adapter"),
+      v.literal("user"),
+    ),
+    publicChange: v.any(),
+    occurredAt: v.string(),
+  })
+    .index("by_owner_idempotency", ["ownerId", "idempotencyKey"])
+    .index("by_task_sequence", ["taskId", "sequence"])
+    .index("by_artifact_sequence", ["artifactId", "sequence"]),
+
+  conversationMessages: defineTable({
+    ownerId: v.string(),
+    taskId: v.id("inquiryTasks"),
+    artifactId: v.id("taskArtifacts"),
+    messageId: v.string(),
+    idempotencyKey: v.string(),
+    sequence: v.number(),
+    authorRole: v.union(v.literal("agent"), v.literal("provider")),
+    authorDisplayName: v.string(),
+    text: v.string(),
+    state: v.union(v.literal("draft"), v.literal("observed")),
+    source: v.union(v.literal("chatgpt"), v.literal("channel_adapter"), v.literal("callbridge_server")),
+    occurredAt: v.string(),
+  })
+    .index("by_artifact_idempotency", ["artifactId", "idempotencyKey"])
+    .index("by_artifact_sequence", ["artifactId", "sequence"])
+    .index("by_task_sequence", ["taskId", "sequence"]),
 
   hotelDemoTasks: defineTable({
     ownerId: v.string(),

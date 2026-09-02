@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.app.json",
+  "include": [
+    "src/main.tsx",
+    "src/App.tsx",
+    "src/ProductionApp.tsx",
+    "src/SimulationApp.tsx",
+    "src/components/ArtifactRegistry.tsx",
+    "src/convex/inquiryClient.ts",
+    "src/simulation/inquirySimulation.ts",
+    "src/webmcp/registerTools.ts",
+    "tests/webmcp.test.ts",
+    "../shared/inquiryContracts.ts",
+    "../shared/inquiryPricing.ts",
+    "../shared/inquiryState.ts",
+    "../shared/inquiryWebMcp.ts",
+    "../shared/taskArtifacts.ts"
+  ]
+}

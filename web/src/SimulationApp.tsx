@@ -5,6 +5,10 @@ import App, { type ConfirmationUiState } from "./App.js";
 import {
   confirmInquirySimulation,
   completeInquirySimulationFixture,
+  answerSimulationArtifactQuestion,
+  beginSimulationArtifactFixture,
+  completeSimulationArtifactAuthorization,
+  getInquirySimulationArtifacts,
   getInquirySimulationEvents,
   getInquirySimulationResult,
   getInquirySimulationSnapshot,
@@ -13,16 +17,22 @@ import {
   subscribeInquirySimulation,
 } from "./simulation/inquirySimulation.js";
 
-export function SimulationApp({ visualFixture }: { visualFixture?: "approved" | "result" }) {
+export function SimulationApp({ visualFixture }: { visualFixture?: "approved" | "result" | "artifacts" }) {
   const [confirmation, setConfirmation] = useState<ConfirmationUiState>({ state: "idle" });
   const draft = useSyncExternalStore(
     subscribeInquirySimulation,
     getInquirySimulationSnapshot,
     getInquirySimulationSnapshot,
   );
+  const artifacts = useSyncExternalStore(
+    subscribeInquirySimulation,
+    getInquirySimulationArtifacts,
+    getInquirySimulationArtifacts,
+  );
 
   useEffect(() => {
     if (visualFixture === "result") completeInquirySimulationFixture();
+    if (visualFixture === "artifacts") beginSimulationArtifactFixture();
   }, [visualFixture]);
 
   useEffect(() => {
@@ -48,9 +58,12 @@ export function SimulationApp({ visualFixture }: { visualFixture?: "approved" | 
   return (
     <App
       activity={getInquirySimulationEvents()}
+      artifacts={artifacts}
       confirmation={confirmation}
       confirmationReady={draft.confirmation.state === "ready"}
       draft={draft}
+      onArtifactAuthorize={(artifact) => completeSimulationArtifactAuthorization(artifact.artifactId)}
+      onArtifactAnswer={(artifact, value) => answerSimulationArtifactQuestion(artifact.artifactId, value)}
       onConfirm={() => {
         confirmInquirySimulation();
         setConfirmation({

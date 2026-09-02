@@ -8,6 +8,7 @@ import {
 import type {
   InquiryCallResult,
   InquiryEventType,
+  InquiryResultOutcome,
   InquiryTaskSnapshot,
   InquiryTaskStatus,
 } from "./inquiryState.js";
@@ -69,6 +70,29 @@ export type GetInquiryStatusOutput = {
   nextSequence: number | null;
 };
 
+export type InquiryProofReceipt = {
+  schemaVersion: 1;
+  taskId: string;
+  attemptId: string;
+  executionRevision: string;
+  outcome: InquiryResultOutcome;
+  callLanguage: string;
+  resultLanguage: string;
+  answeredQuestionIds: string[];
+  unresolvedQuestionIds: string[];
+  sourceEventIds: string[];
+  durationSeconds: number;
+  terminalReason: InquiryCallResult["terminalReason"];
+  disclosureStatus: InquiryCallResult["disclosureStatus"];
+  commitmentSafety: InquiryCallResult["commitmentSafety"];
+  terminalAt: string;
+  cost: {
+    currency: string;
+    status: "provider_reported" | "pending";
+    actualMinorUnits: number | null;
+  };
+};
+
 export type GetInquiryResultOutput =
   | { status: "not_ready" }
   | { status: "processing"; retryAfterMs: number }
@@ -78,11 +102,8 @@ export type GetInquiryResultOutput =
     }
   | {
       status: "ready";
-      taskId: string;
-      attemptId: string;
-      actualCostMinorUnits: number;
-      costStatus: "provider_reported" | "pending";
       result: InquiryCallResult;
+      receipt: InquiryProofReceipt;
     };
 
 export const INQUIRY_WEBMCP_ERROR_CODES = [
@@ -145,11 +166,17 @@ const INTERNAL_ERROR_MAP = {
   VALIDATION_FAILED: "INVALID_INPUT",
   INVALID_INPUT: "INVALID_INPUT",
   IDEMPOTENCY_CONFLICT: "INVALID_INPUT",
+  ARTIFACT_SOURCE_NOT_ALLOWED: "POLICY_DENIED",
+  ARTIFACT_SECRET_REJECTED: "POLICY_DENIED",
+  UNSUPPORTED_PROVIDER: "POLICY_DENIED",
+  UNAPPROVED_ASSET: "POLICY_DENIED",
   STALE_REVISION: "REVISION_CONFLICT",
+  ARTIFACT_REVISION_CONFLICT: "REVISION_CONFLICT",
   REVISION_CONFLICT: "REVISION_CONFLICT",
   EXECUTION_REVISION_MISMATCH: "REVISION_CONFLICT",
   INTENT_REVOKED: "REVISION_CONFLICT",
   INVALID_TRANSITION: "INVALID_STATE",
+  INVALID_ARTIFACT_TRANSITION: "INVALID_STATE",
   INVALID_STATE: "INVALID_STATE",
   INTENT_EXPIRED: "INVALID_STATE",
   INTENT_ALREADY_CONFIRMED: "INVALID_STATE",

@@ -9,15 +9,13 @@ function formatMinorUnits(value: number, currency: string): string {
 }
 
 export function ResultSummary({
-  currency,
   questions,
   output,
 }: {
-  currency: string;
   questions: ReadonlyArray<{ id: string; prompt: string }>;
   output: Extract<GetInquiryResultOutput, { status: "ready" }>;
 }) {
-  const { result } = output;
+  const { receipt, result } = output;
   return (
     <section className="result-summary" aria-labelledby="result-title">
       <div className="result-heading">
@@ -35,7 +33,9 @@ export function ResultSummary({
       </dl>
       <div className="result-meta">
         <span>{result.durationSeconds}s connected</span>
-        <span>{output.costStatus === "provider_reported" ? `${formatMinorUnits(output.actualCostMinorUnits, currency)} provider-reported cost` : "Provider cost pending"}</span>
+        <span>{receipt.cost.status === "provider_reported" && receipt.cost.actualMinorUnits !== null
+          ? `${formatMinorUnits(receipt.cost.actualMinorUnits, receipt.cost.currency)} provider-reported cost`
+          : "Provider cost pending"}</span>
         <span>Disclosure {result.disclosureStatus.replace("_", " ")}</span>
         <span>{result.commitmentSafety === "none_observed" ? "No commitment detected" : "Possible authority issue"}</span>
         <span>{result.terminalReason.replaceAll("_", " ")}</span>

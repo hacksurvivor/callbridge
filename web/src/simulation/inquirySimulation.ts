@@ -11,6 +11,10 @@ import type {
   InquiryActivityEvent,
 } from "../../../shared/inquiryWebMcp.js";
 import type { InquiryTaskSnapshot } from "../../../shared/inquiryState.js";
+import {
+  type ArtifactPayload,
+  type TaskArtifact,
+} from "../../../shared/taskArtifacts.js";
 import type { InquiryToolClient } from "../webmcp/registerTools.js";
 
 const fixtureNow = "2026-08-26T07:00:00.000Z";
@@ -109,6 +113,8 @@ function makeSnapshot(
 
 let currentDraft = makeSnapshot(APPROVED_INQUIRY_FIXTURE);
 let currentResult: GetInquiryResultOutput = { status: "not_ready" };
+let artifacts: TaskArtifact[] = [];
+let artifactSequence = 0;
 let events: InquiryActivityEvent[] = [
   {
     eventId: "simulation:draft-created",
@@ -166,6 +172,129 @@ export function getInquirySimulationEvents(): InquiryActivityEvent[] {
 
 export function getInquirySimulationResult(): GetInquiryResultOutput {
   return currentResult;
+}
+
+export function getInquirySimulationArtifacts(): TaskArtifact[] {
+  return artifacts;
+}
+
+function publishArtifacts(next: TaskArtifact[]): void {
+  artifacts = next;
+  for (const listener of listeners) listener();
+}
+
+function makeArtifact(payload: ArtifactPayload, source: TaskArtifact["source"] = "callbridge_server"): TaskArtifact {
+  const sequence = ++artifactSequence;
+  return {
+    schemaVersion: 1,
+    artifactId: `simulation_artifact_${sequence}`,
+    taskId: currentDraft.taskId,
+    createdSequence: sequence,
+    lastEventSequence: sequence,
+    revision: 1,
+    type: payload.type,
+    status: "active",
+    visibility: "owner",
+    source,
+    payload,
+    createdAt: fixtureNow,
+    updatedAt: fixtureNow,
+  };
+}
+
+export function beginSimulationArtifactFixture(): TaskArtifact {
+  const existing = artifacts.find(({ type }) => type === "auth_required");
+  if (existing) return existing;
+  const artifact = makeArtifact({
+    type: "auth_required",
+    providerId: "callbridge_demo",
+    providerName: "CallBridge controlled provider",
+    reason: "This labeled fixture requires a protected authorization handoff before the provider message is revealed.",
+    state: "required",
+    continuation: "open_secure_browser",
+    simulated: true,
+  });
+  publishArtifacts([...artifacts, artifact]);
+  return artifact;
+}
+
+export function completeSimulationArtifactAuthorization(artifactId: string): void {
+  const current = artifacts.find(({ artifactId: candidate }) => candidate === artifactId);
+  if (!current || current.payload.type !== "auth_required" || current.status !== "active") return;
+  const now = new Date().toISOString();
+  const resolved: TaskArtifact = {
+    ...current,
+    revision: current.revision + 1,
+    lastEventSequence: ++artifactSequence,
+    status: "resolved",
+    payload: { ...current.payload, state: "authorized" },
+    updatedAt: now,
+  };
+  const conversation = makeArtifact({
+    type: "conversation",
+    channel: "web_chat",
+    title: "Controlled provider conversation",
+    participants: [
+      { id: "callbridge-agent", displayName: "CallBridge", role: "agent" },
+      { id: "fixture-provider", displayName: "Controlled provider", role: "provider" },
+    ],
+    latestMessages: [{
+      messageId: "fixture-provider-message",
+      sequence: 1,
+      authorRole: "provider",
+      authorDisplayName: "Controlled provider",
+      text: "Late arrival is available. Please provide the approximate arrival window so the desk can leave a factual note.",
+      state: "observed",
+      occurredAt: now,
+    }],
+    hasEarlierMessages: false,
+    simulated: true,
+  });
+  const question = makeArtifact({
+    type: "user_question",
+    prompt: "What arrival window should CallBridge share with the provider?",
+    responseMode: "single_choice",
+    options: [
+      { id: "before-midnight", label: "Before midnight" },
+      { id: "midnight-to-one", label: "12:00–1:00 AM" },
+      { id: "after-one", label: "After 1:00 AM" },
+    ],
+    simulated: true,
+  });
+  publishArtifacts([
+    ...artifacts.map((artifact) => artifact.artifactId === artifactId ? resolved : artifact),
+    conversation,
+    question,
+  ]);
+}
+
+export function answerSimulationArtifactQuestion(artifactId: string, value: string | string[]): void {
+  const current = artifacts.find(({ artifactId: candidate }) => candidate === artifactId);
+  if (!current || current.payload.type !== "user_question" || current.status !== "active") return;
+  const now = new Date().toISOString();
+  const resolved: TaskArtifact = {
+    ...current,
+    revision: current.revision + 1,
+    lastEventSequence: ++artifactSequence,
+    status: "resolved",
+    payload: { ...current.payload, response: { value, submittedAt: now } },
+    updatedAt: now,
+  };
+  const evidence = makeArtifact({
+    type: "evidence",
+    kind: "screenshot",
+    assetRef: "fixture:evidence:late-arrival-policy",
+    caption: "Controlled fixture evidence showing the provider's late-arrival policy.",
+    capturedAt: now,
+    provenance: "browser_capture",
+    redactionState: "not_required",
+    simulated: true,
+  });
+  publishArtifacts([
+    ...artifacts.map((artifact) => artifact.artifactId === artifactId ? resolved : artifact),
+    evidence,
+  ]);
+  completeInquirySimulationFixture();
 }
 
 export function confirmInquirySimulation(): InquiryTaskSnapshot {
@@ -230,10 +359,6 @@ export function completeInquirySimulationFixture(): InquiryTaskSnapshot {
   events = [...events, ...callEvents];
   currentResult = {
     status: "ready",
-    taskId: currentDraft.taskId,
-    attemptId: "simulation_attempt",
-    actualCostMinorUnits: 17,
-    costStatus: "provider_reported",
     result: {
       schemaVersion: 1,
       executionRevision: currentDraft.executionRevision,
@@ -246,6 +371,28 @@ export function completeInquirySimulationFixture(): InquiryTaskSnapshot {
       commitmentSafety: "none_observed",
       terminalReason: "completed",
       terminalAt,
+    },
+    receipt: {
+      schemaVersion: 1,
+      taskId: currentDraft.taskId,
+      attemptId: "simulation_attempt",
+      executionRevision: currentDraft.executionRevision,
+      outcome: "answered",
+      callLanguage: currentDraft.contract.languages.call,
+      resultLanguage: currentDraft.contract.languages.result,
+      answeredQuestionIds: answers.map(({ questionId }) => questionId),
+      unresolvedQuestionIds: [],
+      sourceEventIds: answers.map(({ evidence }) => evidence.sourceEventId).sort(),
+      durationSeconds: 107,
+      terminalReason: "completed",
+      disclosureStatus: "delivered",
+      commitmentSafety: "none_observed",
+      terminalAt,
+      cost: {
+        currency: currentDraft.contract.costCeiling.currency,
+        status: "provider_reported",
+        actualMinorUnits: 17,
+      },
     },
   };
   const next: InquiryTaskSnapshot = {

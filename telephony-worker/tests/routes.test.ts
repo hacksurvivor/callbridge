@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { HOTEL_INQUIRY_GOLDEN_FIXTURE } from "../../shared/inquiryFixtures.js";
 import type { InquiryDispatchRequest } from "../../shared/inquiryDispatchContracts.js";
+import { InquiryRealtimeController } from "../src/inquiryRealtime.js";
 
 vi.mock("cloudflare:workers", () => ({
   DurableObject: class {
@@ -13,7 +14,14 @@ vi.mock("cloudflare:workers", () => ({
     }
   },
 }));
-const { CallSession, default: worker, scrubStoredRealtimeSnapshot } = await import("../src/index");
+const {
+  CallSession,
+  connectedDurationSeconds,
+  default: worker,
+  scrubStoredRealtimeSnapshot,
+  shouldAnalyzeProviderTranscript,
+  terminalReasonForSocketClose,
+} = await import("../src/index");
 
 const request: InquiryDispatchRequest = {
   taskId: "task_route_1",
@@ -72,9 +80,61 @@ function dispatchRequest() {
   });
 }
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 describe("telephony worker routes", () => {
+  it("requests the assistant-first disclosure exactly once after Realtime applies the session", async () => {
+    const stored = {
+      request,
+      destination: request.contract.destination.e164PhoneNumber,
+      streamToken: "stream-token",
+      creationState: "accepted" as const,
+      nextWorkerSequence: 1,
+      deliveredCallbackKeys: [],
+    };
+    const storage = {
+      get: vi.fn(async () => stored),
+      put: vi.fn(async () => undefined),
+    };
+    const send = vi.fn();
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const session = new CallSession({ storage } as never, {} as never);
+    const internal = session as unknown as {
+      controller: InquiryRealtimeController;
+      openai: { send: (value: string) => void };
+      onOpenAIMessage: (raw: string, value: typeof stored) => Promise<void>;
+    };
+    internal.controller = new InquiryRealtimeController({ request, connectedAtMs: 1_000 });
+    internal.openai = { send };
+
+    await internal.onOpenAIMessage(JSON.stringify({ type: "session.updated" }), stored);
+    await internal.onOpenAIMessage(JSON.stringify({ type: "session.updated" }), stored);
+
+    expect(send).toHaveBeenCalledOnce();
+    expect(JSON.parse(send.mock.calls[0]?.[0] ?? "{}")).toMatchObject({ type: "response.create" });
+  });
+
+  it("does not misclassify an OpenAI socket shutdown as a recipient hangup", () => {
+    expect(terminalReasonForSocketClose("openai")).toBe("provider_failure");
+    expect(terminalReasonForSocketClose("twilio")).toBe("remote_hangup");
+  });
+
+  it("measures connected duration at terminal time instead of delayed result publication time", () => {
+    const connectedAtMs = Date.parse("2026-09-02T03:00:00.000Z");
+    expect(connectedDurationSeconds(connectedAtMs, "2026-09-02T03:00:58.750Z")).toBe(58.75);
+    expect(connectedDurationSeconds(connectedAtMs, "not-a-timestamp")).toBe(0);
+    expect(connectedDurationSeconds(connectedAtMs, "2026-09-02T02:59:59.000Z")).toBe(0);
+  });
+
+  it("does not require model extraction when only CallBridge speech was observed", () => {
+    expect(shouldAnalyzeProviderTranscript([])).toBe(false);
+    expect(shouldAnalyzeProviderTranscript(["   "])).toBe(false);
+    expect(shouldAnalyzeProviderTranscript(["Da, vă aud clar."])).toBe(true);
+  });
+
   it("scrubs persisted transcript turns after alarm-based result delivery", () => {
     const scrubbed = scrubStoredRealtimeSnapshot({
       rawTurns: [{ speaker: "provider", text: "Do not retain this." }],
@@ -207,5 +267,64 @@ describe("telephony worker routes", () => {
       creationState: "creation_uncertain",
       error: "provider_creation_outcome_requires_reconciliation",
     });
+  });
+
+  it("classifies a non-JSON Twilio rejection as definitely not created", async () => {
+    const environment = env();
+    const session = environment.CALL_SESSIONS.get();
+    environment.CALL_SESSIONS.get = vi.fn(() => session);
+    const fetchMock = vi.fn(async (resource: RequestInfo | URL) => {
+      const url = String(resource);
+      if (url.includes("pricing.twilio.com")) return pricingResponse();
+      if (url.includes("DialingPermissions/Countries/JP")) {
+        return new Response(JSON.stringify({
+          iso_code: "JP",
+          low_risk_numbers_enabled: true,
+          high_risk_special_numbers_enabled: false,
+          high_risk_tollfraud_numbers_enabled: false,
+        }), { status: 200 });
+      }
+      if (url.includes("Calls.json")) return new Response("Unauthorized", { status: 401 });
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await worker.fetch(dispatchRequest(), environment as never);
+
+    expect(response.status).toBe(422);
+    await expect(response.json()).resolves.toMatchObject({
+      creationState: "definitely_not_created",
+      error: "Twilio rejected call creation (401)",
+    });
+    expect(session.recordDefinitelyNotCreated).toHaveBeenCalledOnce();
+  });
+
+  it("creates a query-free Twilio Media Stream URL", async () => {
+    let createdTwiml = "";
+    const fetchMock = vi.fn(async (resource: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(resource);
+      if (url.includes("pricing.twilio.com")) return pricingResponse();
+      if (url.includes("DialingPermissions/Countries/JP")) {
+        return new Response(JSON.stringify({
+          iso_code: "JP",
+          low_risk_numbers_enabled: true,
+          high_risk_special_numbers_enabled: false,
+          high_risk_tollfraud_numbers_enabled: false,
+        }), { status: 200 });
+      }
+      if (url.includes("Calls.json")) {
+        createdTwiml = new URLSearchParams(String(init?.body)).get("Twiml") ?? "";
+        return new Response(JSON.stringify({ sid: "CA00000000000000000000000000000001" }), { status: 201 });
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await worker.fetch(dispatchRequest(), env() as never);
+
+    expect(response.status).toBe(201);
+    expect(createdTwiml).toContain("wss://worker.example/media-stream/dispatch_route_1/stream-token");
+    expect(createdTwiml).not.toContain("/media-stream?");
+    expect(createdTwiml).not.toContain("&amp;");
   });
 });

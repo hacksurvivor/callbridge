@@ -9,7 +9,7 @@ export type WebMcpTool = {
   description: string;
   inputSchema: Readonly<Record<string, unknown>>;
   annotations?: WebMcpToolAnnotations;
-  execute: (input: unknown, options: { signal: AbortSignal }) => Promise<unknown>;
+  execute: (input: unknown, options?: { signal?: AbortSignal }) => Promise<unknown>;
 };
 
 export type WebMcpModelContext = {

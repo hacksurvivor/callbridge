@@ -1,19 +1,25 @@
 # CallBridge
 
-Multilingual AI-assisted call delegation. The backend turns typed context,
-voice notes/transcripts, URLs, and screenshots into an editable task draft for
-accommodation, restaurants, services, transport, delivery, marketplaces,
-property, vehicles, and other communication tasks. A draft must be explicitly
-confirmed before the server can hand it to a future call agent.
+> **The web has APIs. The rest of the world has phone numbers. Ask ChatGPT to call either.**
+
+CallBridge lets a person describe any legitimate information-gathering inquiry.
+ChatGPT turns it into a visible structured call brief on the webpage; the person
+reviews the exact revision and is the only one who can confirm it. CallBridge
+then places one disclosed multilingual call and returns an evidence-bound answer.
 
 ## WebMCP web app
 
-`web/` is now the primary CallBridge surface. ChatGPT can use five stable
+`web/` is the primary CallBridge surface. ChatGPT can use five stable
 page tools to create, replace, read, monitor, and retrieve the result of a
 structured inquiry for any supported destination or service. The inquiry
 itself is data: objective, ordered questions, private background, shareable
 facts, languages, spending ceiling, information-only policy, and an optional
 approved playbook.
+
+The executable release matrix covers accommodation, repairs, clinic
+administration, airline baggage, restaurant accessibility, utility procedures,
+government documents, and delivery pickup across Asia, Europe, the Americas,
+and post-Soviet markets. See [release acceptance](docs/RELEASE_ACCEPTANCE.md).
 
 Call confirmation is intentionally absent from WebMCP. It requires the visible
 authenticated **Confirm call** button and is bound to the exact canonical
@@ -28,6 +34,31 @@ provider timeout is never treated as permission to dial again: the attempt
 stops in `creation_uncertain` until an internal provider lookup proves that the
 call exists or definitely does not. Only the latter releases the reserved call
 credit; neither outcome creates a second attempt.
+
+The hackathon submission deliberately ships the five call tools as one static,
+artifact-free catalog. Convex remains authoritative for lifecycle permissions,
+so stale or invalid mutation attempts fail closed. Dynamic lifecycle removal was
+tested at the unit boundary but is not part of the candidate because the exact
+target-browser abort/re-registration behavior could not be proven reliably before
+the release cutoff.
+
+## Evidence receipt
+
+`get_call_result` and the webpage consume the same canonical `{ result, receipt }`
+projection. The receipt binds the answer to the owned task, attempt, execution
+revision, languages, answered/unresolved question IDs, accepted evidence event
+IDs, duration, terminal reason, disclosure and commitment-safety states, and
+provider-cost status. It excludes phone numbers, provider call IDs, raw transcript,
+audio, credentials, private background, and hidden reasoning.
+
+## Submission status
+
+- Candidate code gate: `npm run verify:submission`
+- Final external gates: WorkOS Production judge isolation, target-browser smoke,
+  two consecutive post-fix controlled calls, clean public clone, and public video/link verification
+- Root `npm test` is not used as the submission gate because it also discovers two
+  unshipped historical mobile suites whose local Expo config is unavailable; this
+  limitation is disclosed rather than hidden
 
 ## Backend foundation
 
@@ -59,14 +90,15 @@ credit; neither outcome creates a second attempt.
   Twilio bidirectional Media Streams and OpenAI Realtime. Its own effects flag
   also defaults to false.
 
-The Convex development deployment, isolated WorkOS Staging project, OpenAI
-Realtime credential, Expo server token, and linked EAS project are configured.
-The Gmail read-only adapter is deployed but awaits Google OAuth client credentials
-and user consent. There is no production deployment, checkout UI, deployed PSTN
-bridge, Booking partner credentials, or live provider session. External effects remain
-disabled unless
-`CALLBRIDGE_EXTERNAL_EFFECTS_ENABLED=true` and all capability requirements in
-`.env.example` are present.
+The public WebMCP URL is
+[`callbridge-web.pages.dev`](https://callbridge-web.pages.dev). Final candidate
+promotion requires that this deployment, the Convex deployment, and the dedicated
+WorkOS Production application are bound to the same reviewed build. The current
+Twilio/OpenAI Realtime bridge is available at
+[`callbridge-telephony.office-sergey-moloman.workers.dev`](https://callbridge-telephony.office-sergey-moloman.workers.dev/health).
+A previous controlled Romanian PSTN canary completed successfully; it predates this
+submission hardening and therefore does not count as final-candidate proof. Every
+new call still requires a separate exact-revision webpage confirmation.
 
 ## Historical mobile preview
 
@@ -104,9 +136,15 @@ and packaging boundaries.
 npm install
 npm run build
 npm test
+npm run verify:submission
 npm run test:telephony
+npm --prefix telephony-worker run build:evals
+# Billable and opt-in; requires CALLBRIDGE_EVAL_OPENAI_API_KEY:
+npm --prefix telephony-worker run eval:live
 npm --prefix web test
 npm --prefix web run build
+npm --prefix web run build:production
+npm --prefix web run deploy
 npm --prefix web run dev
 npm --prefix mobile run typecheck
 npm --prefix mobile run web
@@ -116,3 +154,13 @@ swift test --package-path macos
 
 See [the backend design](docs/backend-foundation.md) for the state and
 integration boundaries.
+
+## Challenge lineage
+
+CallBridge existed before the WebMCP Challenge as a mobile-first call-avoidance
+prototype. The challenge work is the web-first WebMCP adapter and authenticated
+review/confirmation/result experience, not a claim that the whole repository was
+created during the event. See [the submission notes](docs/SUBMISSION.md) for the
+exact judged slice.
+
+Licensed under the [MIT License](LICENSE).

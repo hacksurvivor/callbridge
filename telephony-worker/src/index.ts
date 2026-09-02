@@ -13,10 +13,10 @@ import {
 import {
   buildDecisionReadyResult,
   deliverInquiryWorkerCallback,
-  parseInquiryExtraction,
   readTwilioReportedCost,
   type InquiryExtraction,
 } from "./inquiryResult.js";
+import { analyzeInquiryTranscript, formatInquiryTranscript } from "./inquiryExtraction.js";
 import type { InquiryCallResult } from "../../shared/inquiryState.js";
 import type {
   InquiryWorkerCostCallback,
@@ -83,6 +83,36 @@ function authorized(request: Request, secret: string): boolean {
   return Boolean(secret && value === `Bearer ${secret}`);
 }
 
+function mediaStreamPath(dispatchId: string, streamToken: string): string {
+  return `/media-stream/${encodeURIComponent(dispatchId)}/${encodeURIComponent(streamToken)}`;
+}
+
+function parseMediaStreamPath(pathname: string): { dispatchId: string; streamToken: string } | null {
+  const segments = pathname.split("/");
+  if (segments.length !== 4 || segments[0] !== "" || segments[1] !== "media-stream") return null;
+  try {
+    const dispatchId = decodeURIComponent(segments[2] ?? "");
+    const streamToken = decodeURIComponent(segments[3] ?? "");
+    return dispatchId && streamToken ? { dispatchId, streamToken } : null;
+  } catch {
+    return null;
+  }
+}
+
+export function terminalReasonForSocketClose(channel: "twilio" | "openai"): InquiryCallResult["terminalReason"] {
+  return channel === "twilio" ? "remote_hangup" : "provider_failure";
+}
+
+export function shouldAnalyzeProviderTranscript(providerTurns: readonly string[]): boolean {
+  return providerTurns.some((turn) => turn.trim().length > 0);
+}
+
+export function connectedDurationSeconds(connectedAtMs: number, terminalAt: string): number {
+  const terminalAtMs = Date.parse(terminalAt);
+  if (!Number.isFinite(connectedAtMs) || !Number.isFinite(terminalAtMs)) return 0;
+  return Math.max(0, (terminalAtMs - connectedAtMs) / 1_000);
+}
+
 class ProviderRejectedBeforeCreation extends Error {}
 class ProviderCreationUncertain extends Error {}
 
@@ -104,7 +134,13 @@ async function createTwilioCall(input: {
   } catch {
     throw new ProviderCreationUncertain("Twilio call creation outcome is unknown");
   }
-  const data = await response.json<{ sid?: string; message?: string }>();
+  let data: { sid?: string; message?: string };
+  try {
+    data = await response.json<{ sid?: string; message?: string }>();
+  } catch {
+    if (!response.ok) throw new ProviderRejectedBeforeCreation(`Twilio rejected call creation (${response.status})`);
+    throw new ProviderCreationUncertain("Twilio returned an unreadable successful call-creation response");
+  }
   if (!response.ok) throw new ProviderRejectedBeforeCreation(`Twilio rejected call creation (${response.status})`);
   if (!data.sid) throw new ProviderCreationUncertain("Twilio accepted call creation without returning a call SID");
   return data.sid;
@@ -204,7 +240,7 @@ async function dispatch(request: Request, env: Env): Promise<Response> {
   }
 
   const origin = new URL(request.url).origin.replace(/^http/, "ws");
-  const streamUrl = `${origin}/media-stream?dispatch=${encodeURIComponent(input.dispatchIdempotencyKey)}&token=${encodeURIComponent(configured.streamToken)}`;
+  const streamUrl = `${origin}${mediaStreamPath(input.dispatchIdempotencyKey, configured.streamToken)}`;
   const twiml = `<?xml version="1.0" encoding="UTF-8"?><Response><Connect><Stream url="${escapeXml(streamUrl)}" /></Connect></Response>`;
   await session.beginCallCreation();
   try {
@@ -243,10 +279,9 @@ export default {
     }
     if (request.method === "POST" && url.pathname === "/pricing-quote") return await pricingQuote(request, env);
     if (request.method === "POST" && url.pathname === "/dispatch") return await dispatch(request, env);
-    if (request.method === "GET" && url.pathname === "/media-stream" && request.headers.get("upgrade")?.toLowerCase() === "websocket") {
-      const dispatchId = url.searchParams.get("dispatch");
-      if (!dispatchId) return new Response("Missing dispatch", { status: 400 });
-      return await env.CALL_SESSIONS.get(env.CALL_SESSIONS.idFromName(dispatchId)).fetch(request);
+    const mediaStream = parseMediaStreamPath(url.pathname);
+    if (request.method === "GET" && mediaStream && request.headers.get("upgrade")?.toLowerCase() === "websocket") {
+      return await env.CALL_SESSIONS.get(env.CALL_SESSIONS.idFromName(mediaStream.dispatchId)).fetch(request);
     }
     return new Response("Not found", { status: 404 });
   },
@@ -258,6 +293,7 @@ export class CallSession extends DurableObject<Env> {
   private streamSid?: string;
   private controller?: InquiryRealtimeController;
   private openaiSessionConfigured = false;
+  private firstAssistantAudioForwarded = false;
   private queuedInputAudio: string[] = [];
   private timeoutTimer?: ReturnType<typeof setTimeout>;
   private callbackStarted = false;
@@ -269,7 +305,8 @@ export class CallSession extends DurableObject<Env> {
     if (session.pendingWorkerEvent) {
       try {
         await this.deliverPreparedWorkerEvent(session);
-      } catch {
+      } catch (error) {
+        this.logBackgroundFailure(session, "worker_event_delivery_failed", error);
         await this.ctx.storage.setAlarm(Date.now() + 60_000);
         return;
       }
@@ -278,7 +315,8 @@ export class CallSession extends DurableObject<Env> {
     if (afterEvent?.terminalReason && !afterEvent.completionDelivered && !afterEvent.pendingResultCallback) {
       try {
         await this.sendCallback(afterEvent);
-      } catch {
+      } catch (error) {
+        this.logBackgroundFailure(afterEvent, "result_preparation_failed", error);
         await this.ctx.storage.setAlarm(Date.now() + 60_000);
         return;
       }
@@ -287,7 +325,8 @@ export class CallSession extends DurableObject<Env> {
     if (afterPreparation?.pendingResultCallback && !afterPreparation.completionDelivered) {
       try {
         await this.deliverPreparedResult(afterPreparation);
-      } catch {
+      } catch (error) {
+        this.logBackgroundFailure(afterPreparation, "result_delivery_failed", error);
         await this.ctx.storage.setAlarm(Date.now() + 60_000);
         return;
       }
@@ -345,8 +384,8 @@ export class CallSession extends DurableObject<Env> {
 
   async fetch(request: Request): Promise<Response> {
     const session = await this.ctx.storage.get<StoredSession>("session");
-    const token = new URL(request.url).searchParams.get("token");
-    if (!session || !token || token !== session.streamToken) return new Response("Forbidden", { status: 403 });
+    const mediaStream = parseMediaStreamPath(new URL(request.url).pathname);
+    if (!session || !mediaStream || mediaStream.streamToken !== session.streamToken) return new Response("Forbidden", { status: 403 });
     const pair = new WebSocketPair();
     const client = pair[0];
     const server = pair[1];
@@ -358,7 +397,7 @@ export class CallSession extends DurableObject<Env> {
       ...(session.realtimeSnapshot ? { snapshot: session.realtimeSnapshot } : {}),
     });
     server.addEventListener("message", (event) => this.ctx.waitUntil(this.onTwilioMessage(String(event.data), session)));
-    server.addEventListener("close", () => this.finish(session, "remote_hangup"));
+    server.addEventListener("close", () => this.finish(session, terminalReasonForSocketClose("twilio")));
     server.addEventListener("error", () => this.finish(session, "provider_failure"));
     this.ctx.waitUntil(this.connectOpenAI(session).catch(() => this.finish(session, "provider_failure")));
     this.scheduleTimeoutCheck(session);
@@ -374,7 +413,16 @@ export class CallSession extends DurableObject<Env> {
     socket.accept();
     this.openai = socket;
     socket.addEventListener("message", (event) => this.ctx.waitUntil(this.onOpenAIMessage(String(event.data), session)));
-    socket.addEventListener("close", () => this.finish(session, "remote_hangup"));
+    socket.addEventListener("close", (event) => {
+      console.log(JSON.stringify({
+        event: "realtime_socket_closed",
+        occurredAt: new Date().toISOString(),
+        attemptId: session.request.attemptId,
+        code: event.code,
+        wasClean: event.wasClean,
+      }));
+      this.finish(session, terminalReasonForSocketClose("openai"));
+    });
     socket.addEventListener("error", () => this.finish(session, "provider_failure"));
     await this.maybeConfigureOpenAI(session);
   }
@@ -385,6 +433,7 @@ export class CallSession extends DurableObject<Env> {
   }
 
   private async onTwilioMessage(raw: string, session: StoredSession): Promise<void> {
+    if (this.callbackStarted) return;
     let event: {
       event?: string;
       start?: { streamSid?: string };
@@ -407,6 +456,12 @@ export class CallSession extends DurableObject<Env> {
       return;
     }
     if (event.event === "mark" && event.mark?.name) {
+      const completionCommands = this.controller?.completionMarkReceived(event.mark.name) ?? [];
+      if (completionCommands.length > 0) {
+        await this.executeCommands(completionCommands, session);
+        await this.persistController(session);
+        return;
+      }
       const delivered = this.controller?.twilioMarkReceived(event.mark.name, Date.now()) ?? false;
       await this.persistController(session);
       if (delivered) {
@@ -431,6 +486,7 @@ export class CallSession extends DurableObject<Env> {
       request: session.request,
       model: this.env.OPENAI_REALTIME_MODEL,
     })));
+    this.logRealtimeEvent(session, "realtime_session_update_sent");
     this.openaiSessionConfigured = true;
     for (const audio of this.queuedInputAudio.splice(0)) {
       this.openai.send(JSON.stringify({ type: "input_audio_buffer.append", audio }));
@@ -439,6 +495,7 @@ export class CallSession extends DurableObject<Env> {
   }
 
   private async onOpenAIMessage(raw: string, session: StoredSession): Promise<void> {
+    if (this.callbackStarted) return;
     let event: {
       type?: string;
       delta?: string;
@@ -451,11 +508,16 @@ export class CallSession extends DurableObject<Env> {
     const controller = this.controller;
     if (!controller) return;
     let commands: RealtimeCommand[] = [];
-    if (event.type === "response.created") {
+    if (event.type === "session.updated") {
+      this.logRealtimeEvent(session, "realtime_session_updated");
+      commands = controller.sessionConfigured(session.request);
+      if (commands.length > 0) this.logRealtimeEvent(session, "realtime_opening_response_requested");
+    } else if (event.type === "response.created") {
       controller.responseStarted();
     } else if (event.type === "response.output_item.added" && event.item?.type === "message" && event.item.id) {
       controller.assistantItemAdded(event.item.id);
     } else if (event.type === "input_audio_buffer.speech_started") {
+      this.logRealtimeEvent(session, "realtime_recipient_speech_started");
       commands = controller.recipientSpeechStarted(this.streamSid, Date.now());
     } else if (event.type === "input_audio_buffer.speech_stopped") {
       controller.recipientSpeechStopped();
@@ -463,6 +525,10 @@ export class CallSession extends DurableObject<Env> {
       controller.assistantItemAdded(event.item_id ?? "");
       controller.assistantAudioSent(event.delta, Date.now());
       this.twilio?.send(JSON.stringify({ event: "media", streamSid: this.streamSid, media: { payload: event.delta } }));
+      if (!this.firstAssistantAudioForwarded) {
+        this.firstAssistantAudioForwarded = true;
+        this.logRealtimeEvent(session, "realtime_first_audio_forwarded");
+      }
     } else if (event.type === "conversation.item.input_audio_transcription.completed" && event.transcript) {
       commands = controller.providerTranscript(event.transcript, session.request, Date.now());
     } else if ((event.type === "response.output_audio_transcript.done" || event.type === "response.audio_transcript.done") && event.transcript) {
@@ -470,10 +536,29 @@ export class CallSession extends DurableObject<Env> {
     } else if (event.type === "response.done" || event.type === "response.cancelled" || event.type === "response.failed") {
       commands = controller.responseFinished(session.request, this.streamSid);
     } else if (event.type === "error") {
+      this.logRealtimeEvent(session, "realtime_provider_error");
       commands = [{ channel: "control", action: "hangup", reason: "disclosure_failure" }];
     }
     await this.executeCommands(commands, session);
     await this.persistController(session);
+  }
+
+  private logRealtimeEvent(session: StoredSession, event: string): void {
+    console.log(JSON.stringify({
+      event,
+      occurredAt: new Date().toISOString(),
+      attemptId: session.request.attemptId,
+    }));
+  }
+
+  private logBackgroundFailure(session: StoredSession, event: string, error: unknown): void {
+    console.error(JSON.stringify({
+      event,
+      occurredAt: new Date().toISOString(),
+      attemptId: session.request.attemptId,
+      errorName: error instanceof Error ? error.name : "UnknownError",
+      errorMessage: error instanceof Error ? error.message.slice(0, 240) : "Unknown background failure",
+    }));
   }
 
   private async executeCommands(commands: RealtimeCommand[], session: StoredSession): Promise<void> {
@@ -481,11 +566,13 @@ export class CallSession extends DurableObject<Env> {
       if (command.channel === "openai") this.openai?.send(JSON.stringify(command.payload));
       else if (command.channel === "twilio") this.twilio?.send(JSON.stringify(command.payload));
       else {
-        const terminalReason: InquiryCallResult["terminalReason"] = command.reason === "connected_timeout"
-          ? "connected_timeout"
-          : command.reason === "automated_greeting" || command.reason === "ivr" || command.reason === "initial_recipient_silence_timeout"
-            ? "no_answer"
-            : "provider_failure";
+        const terminalReason: InquiryCallResult["terminalReason"] = command.reason === "completed"
+          ? "completed"
+          : command.reason === "connected_timeout"
+            ? "connected_timeout"
+            : command.reason === "automated_greeting" || command.reason === "ivr" || command.reason === "initial_recipient_silence_timeout"
+              ? "no_answer"
+              : "provider_failure";
         this.finish(session, terminalReason);
         return;
       }
@@ -586,6 +673,15 @@ export class CallSession extends DurableObject<Env> {
   private finish(session: StoredSession, terminalReason: InquiryCallResult["terminalReason"]): void {
     if (this.callbackStarted) return;
     this.callbackStarted = true;
+    const terminalAt = new Date().toISOString();
+    console.log(JSON.stringify({
+      event: "call_finishing",
+      occurredAt: terminalAt,
+      attemptId: session.request.attemptId,
+      terminalReason,
+      disclosureDelivered: this.controller?.snapshot().disclosureDelivered ?? false,
+      disclosureInterrupted: this.controller?.snapshot().disclosureResponseInterrupted ?? false,
+    }));
     if (this.timeoutTimer) clearTimeout(this.timeoutTimer);
     this.controller?.finish();
     try { this.openai?.close(1000, "call ended"); } catch { /* already closed */ }
@@ -593,12 +689,17 @@ export class CallSession extends DurableObject<Env> {
     this.ctx.waitUntil((async () => {
       const latest = await this.ctx.storage.get<StoredSession>("session");
       if (latest) {
-        await this.ctx.storage.put("session", { ...latest, terminalReason } satisfies StoredSession);
+        await this.ctx.storage.put("session", {
+          ...latest,
+          terminalReason,
+          resultTerminalAt: latest.resultTerminalAt ?? terminalAt,
+        } satisfies StoredSession);
       }
       await this.persistController(session);
       try {
         await this.sendCallback(session);
-      } catch {
+      } catch (error) {
+        this.logBackgroundFailure(session, "initial_result_preparation_failed", error);
         await this.ctx.storage.setAlarm(Date.now() + 60_000);
       }
     })());
@@ -610,10 +711,7 @@ export class CallSession extends DurableObject<Env> {
     const providerTurns = (snapshot?.rawTurns ?? [])
       .filter(({ speaker }) => speaker === "provider")
       .map(({ text }) => text);
-    const rawTranscript = (snapshot?.rawTurns ?? [])
-      .map(({ speaker, text }) => `${speaker === "provider" ? "Provider" : "CallBridge"}: ${text}`)
-      .join("\n")
-      .slice(0, 80_000);
+    const rawTranscript = formatInquiryTranscript(snapshot?.rawTurns ?? []);
     const persisted = await this.ctx.storage.get<StoredSession>("session");
     const terminalAt = persisted?.resultTerminalAt ?? new Date().toISOString();
     if (!persisted?.resultTerminalAt) {
@@ -621,10 +719,11 @@ export class CallSession extends DurableObject<Env> {
       if (!current) throw new Error("Inquiry callback session disappeared");
       await this.ctx.storage.put("session", { ...current, resultTerminalAt: terminalAt } satisfies StoredSession);
     }
+    const hasProviderEvidence = shouldAnalyzeProviderTranscript(providerTurns);
     const analyzed = persisted?.analysisPrepared
       ? persisted.preparedExtraction ?? null
-      : rawTranscript ? await this.analyzeTranscript(session, rawTranscript, providerTurns) : null;
-    if (rawTranscript && !analyzed) {
+      : hasProviderEvidence ? await this.analyzeTranscript(session, rawTranscript, providerTurns) : null;
+    if (hasProviderEvidence && !analyzed) {
       await this.sendWorkerEvent(session, "ended", { type: "call_ended", occurredAt: terminalAt });
       throw new Error("Transcript analysis is unavailable; result publication remains pending");
     }
@@ -660,7 +759,7 @@ export class CallSession extends DurableObject<Env> {
       request: session.request,
       extraction: analyzed,
       evidenceEventIds,
-      durationSeconds: snapshot ? (Date.now() - snapshot.connectedAtMs) / 1_000 : 0,
+      durationSeconds: snapshot ? connectedDurationSeconds(snapshot.connectedAtMs, terminalAt) : 0,
       disclosureStatus: snapshot?.disclosureDelivered ? "delivered" : terminalReason === "provider_failure" ? "failed" : "not_observed",
       terminalReason,
       terminalAt,
@@ -762,51 +861,13 @@ export class CallSession extends DurableObject<Env> {
     rawTranscript: string,
     providerTurns: readonly string[],
   ): Promise<InquiryExtraction | null> {
-    const schema = {
-      type: "object",
-      additionalProperties: false,
-      required: ["answers", "possibleCommitmentViolation", "recipientRequestedNoFurtherCalls"],
-      properties: {
-        answers: {
-          type: "array",
-          minItems: session.request.contract.questions.length,
-          maxItems: session.request.contract.questions.length,
-          items: {
-            type: "object",
-            additionalProperties: false,
-            required: ["questionId", "status", "value", "sourceExcerpt"],
-            properties: {
-              questionId: { type: "string", enum: session.request.contract.questions.map(({ id }) => id) },
-              status: { type: "string", enum: ["reported", "not_answered", "ambiguous"] },
-              value: { type: ["string", "null"], maxLength: 2_000 },
-              sourceExcerpt: { type: ["string", "null"], maxLength: 1_000 },
-            },
-          },
-        },
-        possibleCommitmentViolation: { type: "boolean" },
-        recipientRequestedNoFurtherCalls: { type: "boolean" },
-      },
-    };
-    try {
-      const response = await fetch("https://api.openai.com/v1/responses", {
-        method: "POST",
-        headers: { authorization: `Bearer ${this.env.OPENAI_API_KEY}`, "content-type": "application/json", "OpenAI-Safety-Identifier": await this.safetyId(session.request.ownerId) },
-        body: JSON.stringify({
-          model: this.env.OPENAI_SUMMARY_MODEL,
-          input: [
-          { role: "system", content: [{ type: "input_text", text: "Return exactly one answer for every approved question. Extract only facts explicitly stated by the Provider. Never infer availability, price, terms, completion, or success. For reported or ambiguous answers, sourceExcerpt must be an exact contiguous quote copied from a Provider turn in the transcript. Translate value into the target language. For not_answered, value and sourceExcerpt must be null. Mark possibleCommitmentViolation only if CallBridge itself audibly booked, changed, cancelled, paid, accepted a fee or terms, or made another commitment. Set recipientRequestedNoFurtherCalls only when the Provider explicitly asks CallBridge not to call this number again; do not infer it from declining the current inquiry or ending the call." }] },
-          { role: "user", content: [{ type: "input_text", text: `Target language: ${session.request.contract.languages.result}\nObjective: ${session.request.contract.objective}\nApproved questions: ${session.request.contract.questions.map(({ id, prompt }) => `[${id}] ${prompt}`).join(" | ")}\nTranscript:\n${rawTranscript}` }] },
-        ],
-        text: { format: { type: "json_schema", name: "call_result", strict: true, schema } },
-        }),
-      });
-      if (!response.ok) return null;
-      const result = await response.json<{ output?: Array<{ content?: Array<{ type?: string; text?: string }> }> }>();
-      const text = result.output?.flatMap((item) => item.content ?? []).find((item) => item.type === "output_text")?.text;
-      if (!text) return null;
-      return parseInquiryExtraction(JSON.parse(text), session.request, providerTurns);
-    } catch {
-      return null;
-    }
+    return await analyzeInquiryTranscript({
+      apiKey: this.env.OPENAI_API_KEY,
+      model: this.env.OPENAI_SUMMARY_MODEL,
+      request: session.request,
+      rawTranscript,
+      providerTurns,
+      safetyIdentifier: await this.safetyId(session.request.ownerId),
+    });
   }
 }

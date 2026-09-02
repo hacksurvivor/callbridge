@@ -7,6 +7,7 @@ import { INQUIRY_CONTRACT_SCHEMA_VERSION, type InquiryCallContract } from "../..
 import { toInquiryWebMcpError, type GetInquiryResultOutput, type InquiryActivityEvent } from "../../shared/inquiryWebMcp.js";
 import type { InquiryTaskSnapshot, InquiryTaskStatus } from "../../shared/inquiryState.js";
 import App, { type ConfirmationUiState } from "./App.js";
+import { currentAuthReturnPath, validatedAuthReturnPath } from "./authReturn.js";
 import { Header } from "./components/Header.js";
 import {
   confirmInquiryTask,
@@ -15,7 +16,14 @@ import {
   readTaskIdFromLocation,
   type PreparedConfirmationIntent,
 } from "./convex/inquiryClient.js";
-import { registerCallBridgeWebMcpTools } from "./webmcp/registerTools.js";
+import {
+  mergeInquiryActivity,
+  nextRefreshFailureCount,
+  shouldStopInquiryPolling,
+} from "./submissionRuntime.js";
+import {
+  registerCallBridgeWebMcpTools,
+} from "./webmcp/registerTools.js";
 
 type Configuration = {
   convexUrl: string;
@@ -64,8 +72,14 @@ function LiveWorkspace() {
   const [activity, setActivity] = useState<InquiryActivityEvent[]>([]);
   const [liveStatus, setLiveStatus] = useState<InquiryTaskStatus | null>(null);
   const [result, setResult] = useState<GetInquiryResultOutput>({ status: "not_ready" });
-  const [restoreState, setRestoreState] = useState<"idle" | "loading" | "failed">("idle");
+  const [restoreState, setRestoreState] = useState<"idle" | "loading" | "failed">(
+    () => readTaskIdFromLocation() ? "loading" : "idle",
+  );
   const [toolState, setToolState] = useState<"registering" | "ready" | "unsupported" | "failed">("registering");
+  const [refreshHealth, setRefreshHealth] = useState<{ state: "current" | "degraded"; lastUpdatedAt: string | null }>({
+    state: "current",
+    lastUpdatedAt: null,
+  });
   const [confirmation, setConfirmation] = useState<ConfirmationUiState>({ state: "idle" });
   const [preparedIntent, setPreparedIntent] = useState<PreparedConfirmationIntent | null>(null);
 
@@ -132,7 +146,9 @@ function LiveWorkspace() {
       signal: controller.signal,
     }).then((registered) => {
       if (!active) return;
-      setToolState(registered.supported ? "ready" : "unsupported");
+      setToolState(registered.supported
+        ? "ready"
+        : registered.error.code === "UNSUPPORTED_ENVIRONMENT" ? "unsupported" : "failed");
     }, () => {
       if (active) setToolState("failed");
     });
@@ -146,26 +162,56 @@ function LiveWorkspace() {
     if (!draft) return;
     const controller = new AbortController();
     let active = true;
+    let nextSequence = 0;
+    let latestStatus: InquiryTaskStatus = draft.status;
+    let latestResult: GetInquiryResultOutput = { status: "not_ready" };
+    let consecutiveFailures = 0;
+    let interval: number | undefined;
     const refresh = async () => {
-      try {
-        const [status, nextResult] = await Promise.all([
-          toolClient.getCallStatus({ schemaVersion: 1, taskId: draft.taskId }, controller.signal),
-          toolClient.getCallResult({ schemaVersion: 1, taskId: draft.taskId }, controller.signal),
-        ]);
-        if (!active) return;
-        setActivity(status.events);
-        setLiveStatus(status.taskStatus);
-        setResult(nextResult);
-      } catch {
-        // Preserve the last factual state; tool calls expose errors independently.
+      const [statusOutcome, resultOutcome] = await Promise.allSettled([
+        toolClient.getCallStatus({
+          schemaVersion: 1,
+          taskId: draft.taskId,
+          ...(nextSequence > 0 ? { afterSequence: nextSequence } : {}),
+        }, controller.signal),
+        toolClient.getCallResult({ schemaVersion: 1, taskId: draft.taskId }, controller.signal),
+      ]);
+      if (!active) return;
+
+      let successfulReads = 0;
+      if (statusOutcome.status === "fulfilled") {
+        successfulReads += 1;
+        latestStatus = statusOutcome.value.taskStatus;
+        setLiveStatus(latestStatus);
+        setActivity((current) => mergeInquiryActivity(current, statusOutcome.value.events));
+        if (statusOutcome.value.nextSequence !== null) {
+          nextSequence = Math.max(nextSequence, statusOutcome.value.nextSequence);
+        }
+      }
+      if (resultOutcome.status === "fulfilled") {
+        successfulReads += 1;
+        latestResult = resultOutcome.value;
+        setResult(latestResult);
+      }
+
+      consecutiveFailures = nextRefreshFailureCount(consecutiveFailures, successfulReads);
+      if (successfulReads > 0) {
+        setRefreshHealth({ state: "current", lastUpdatedAt: new Date().toISOString() });
+      } else if (consecutiveFailures >= 2) {
+        setRefreshHealth((current) => ({ ...current, state: "degraded" }));
+      }
+
+      if (shouldStopInquiryPolling(latestStatus, latestResult) && interval !== undefined) {
+        window.clearInterval(interval);
+        interval = undefined;
       }
     };
     void refresh();
-    const interval = window.setInterval(() => void refresh(), 1_500);
+    interval = window.setInterval(() => void refresh(), 1_500);
     return () => {
       active = false;
       controller.abort();
-      window.clearInterval(interval);
+      if (interval !== undefined) window.clearInterval(interval);
     };
   }, [draft?.taskId, toolClient]);
 
@@ -213,6 +259,7 @@ function LiveWorkspace() {
         draft={draft}
         onConfirm={confirm}
         onUpdate={update}
+        refreshHealth={refreshHealth}
         result={result}
         status={liveStatus ?? draft.status}
       />
@@ -232,7 +279,9 @@ function LiveWorkspace() {
     <AccessState
       kicker={toolState === "ready" ? "Connected to ChatGPT" : "Connecting"}
       title={toolState === "ready" ? "Ask ChatGPT to prepare any inquiry call" : "Registering CallBridge tools"}
-      {...(toolState === "ready" ? { detail: "Five stable WebMCP tools are ready. Confirmation remains webpage-only." } : {})}
+      {...(toolState === "ready" ? {
+        detail: "ChatGPT can prepare, revise, and read this controlled call task. Confirmation remains webpage-only.",
+      } : {})}
     />
   );
 }
@@ -241,7 +290,18 @@ function AuthenticationBoundary() {
   const auth = useAuth();
   const convexAuth = useConvexAuth();
   if (auth.isLoading || convexAuth.isLoading) return <AccessState kicker="Secure session" title="Checking your CallBridge session" />;
-  if (!auth.user) return <AccessState kicker="Private call tasks" title="Sign in to continue" action={{ label: "Sign in", run: () => void auth.signIn() }} />;
+  if (!auth.user) {
+    return (
+      <AccessState
+        kicker="Private call tasks"
+        title="Sign in to continue"
+        action={{
+          label: "Sign in",
+          run: () => void auth.signIn({ state: { returnTo: currentAuthReturnPath() } }),
+        }}
+      />
+    );
+  }
   if (!convexAuth.isAuthenticated) {
     return <AccessState kicker="Secure session" title="Finishing authentication" detail="WebMCP remains unavailable until the backend confirms this session." />;
   }
@@ -258,10 +318,16 @@ export function ProductionApp() {
     return <AccessState kicker="Setup required" title="CallBridge is not configured" detail="Convex and WorkOS public client settings are missing. No WebMCP tools were registered." />;
   }
 
+  const handleAuthRedirect = ({ state }: { state?: unknown }) => {
+    const returnPath = validatedAuthReturnPath(state, window.location.origin);
+    if (returnPath) window.history.replaceState(window.history.state, "", returnPath);
+  };
+
   return (
     <AuthKitProvider
       clientId={configuration.workosClientId}
       devMode={import.meta.env.DEV ? true : false}
+      onRedirectCallback={handleAuthRedirect}
       redirectUri={configuration.redirectUri}
     >
       <ConvexProviderWithAuthKit client={convex} useAuth={useAuth}>

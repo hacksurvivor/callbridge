@@ -15,6 +15,9 @@ import type {
 } from "../../../shared/inquiryWebMcp.js";
 import type { InquiryTaskSnapshot } from "../../../shared/inquiryState.js";
 import type { InquiryPricingQuote } from "../../../shared/inquiryPricing.js";
+import {
+  type TaskArtifact,
+} from "../../../shared/taskArtifacts.js";
 import type { InquiryToolClient } from "../webmcp/registerTools.js";
 
 type CreateDraftArgs = { idempotencyKey: string; contract: unknown };
@@ -45,6 +48,21 @@ type ConfirmAndQueueOutput = {
 };
 type ListEventsArgs = { taskId: string; afterSequence?: number };
 type GetResultArgs = { taskId: string };
+type SubmitUserQuestionResponseArgs = {
+  taskId: string;
+  artifactId: string;
+  expectedArtifactRevision: number;
+  idempotencyKey: string;
+  value: string | string[];
+};
+type BeginControlledFixtureArgs = { taskId: string; expectedTaskRevision: number; idempotencyKey: string };
+type CompleteControlledFixtureAuthorizationArgs = {
+  taskId: string;
+  artifactId: string;
+  expectedArtifactRevision: number;
+  idempotencyKey: string;
+};
+type AttachControlledFixtureEvidenceArgs = { taskId: string; idempotencyKey: string };
 const createDraftRef = makeFunctionReference<"mutation", CreateDraftArgs, InquiryTaskSnapshot>("inquiries:createDraft");
 const updateDraftRef = makeFunctionReference<"mutation", UpdateDraftArgs, UpdateInquiryDraftOutput>("inquiries:updateDraft");
 const readDraftRef = makeFunctionReference<"query", ReadDraftArgs, InquiryTaskSnapshot>("inquiries:readDraft");
@@ -53,6 +71,10 @@ const quoteCallRef = makeFunctionReference<"action", QuoteCallArgs, InquiryPrici
 const confirmAndQueueRef = makeFunctionReference<"mutation", ConfirmAndQueueArgs, ConfirmAndQueueOutput>("inquiries:confirmAndQueue");
 const listEventsRef = makeFunctionReference<"query", ListEventsArgs, InquiryActivityEvent[]>("inquiries:listEvents");
 const getResultRef = makeFunctionReference<"query", GetResultArgs, GetInquiryResultOutput>("inquiries:getResult");
+const submitUserQuestionResponseRef = makeFunctionReference<"mutation", SubmitUserQuestionResponseArgs, TaskArtifact>("taskArtifacts:submitUserQuestionResponse");
+const beginControlledFixtureRef = makeFunctionReference<"mutation", BeginControlledFixtureArgs, TaskArtifact>("taskArtifacts:beginControlledFixture");
+const completeControlledFixtureAuthorizationRef = makeFunctionReference<"mutation", CompleteControlledFixtureAuthorizationArgs, TaskArtifact>("taskArtifacts:completeControlledFixtureAuthorization");
+const attachControlledFixtureEvidenceRef = makeFunctionReference<"mutation", AttachControlledFixtureEvidenceArgs, TaskArtifact>("taskArtifacts:attachControlledFixtureEvidence");
 
 function assertNotAborted(signal: AbortSignal): void {
   if (signal.aborted) throw new DOMException("The WebMCP request was aborted.", "AbortError");
@@ -147,6 +169,53 @@ export function createConvexInquiryClient(input: {
       return result;
     },
   };
+}
+
+export async function submitArtifactQuestionResponse(input: {
+  convex: ConvexReactClient;
+  artifact: TaskArtifact;
+  value: string | string[];
+}): Promise<TaskArtifact> {
+  return input.convex.mutation(submitUserQuestionResponseRef, {
+    taskId: input.artifact.taskId,
+    artifactId: input.artifact.artifactId,
+    expectedArtifactRevision: input.artifact.revision,
+    idempotencyKey: `question-response-${crypto.randomUUID()}`,
+    value: input.value,
+  });
+}
+
+export async function beginArtifactFixture(input: {
+  convex: ConvexReactClient;
+  draft: InquiryTaskSnapshot;
+}): Promise<TaskArtifact> {
+  return input.convex.mutation(beginControlledFixtureRef, {
+    taskId: input.draft.taskId,
+    expectedTaskRevision: input.draft.revision,
+    idempotencyKey: `artifact-fixture-${input.draft.taskId}`,
+  });
+}
+
+export async function completeArtifactFixtureAuthorization(input: {
+  convex: ConvexReactClient;
+  artifact: TaskArtifact;
+}): Promise<TaskArtifact> {
+  return input.convex.mutation(completeControlledFixtureAuthorizationRef, {
+    taskId: input.artifact.taskId,
+    artifactId: input.artifact.artifactId,
+    expectedArtifactRevision: input.artifact.revision,
+    idempotencyKey: `fixture-auth-${input.artifact.artifactId}`,
+  });
+}
+
+export async function attachArtifactFixtureEvidence(input: {
+  convex: ConvexReactClient;
+  taskId: string;
+}): Promise<TaskArtifact> {
+  return input.convex.mutation(attachControlledFixtureEvidenceRef, {
+    taskId: input.taskId,
+    idempotencyKey: `fixture-evidence-${input.taskId}`,
+  });
 }
 
 export type PreparedConfirmationIntent = {
