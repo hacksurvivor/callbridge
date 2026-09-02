@@ -88,8 +88,11 @@ export function isPlausibleTaskId(value: string | null): value is string {
   return value !== null && value.length >= 8 && value.length <= 128 && /^[A-Za-z0-9_-]+$/.test(value);
 }
 
-export function readTaskIdFromLocation(location: Location = window.location): string | null {
-  const candidate = new URL(location.href).searchParams.get("task");
+export function readTaskIdFromLocation(location?: Location): string | null {
+  const currentLocation = location
+    ?? (typeof window === "undefined" ? null : window.location);
+  if (!currentLocation) return null;
+  const candidate = new URL(currentLocation.href).searchParams.get("task");
   return isPlausibleTaskId(candidate) ? candidate : null;
 }
 

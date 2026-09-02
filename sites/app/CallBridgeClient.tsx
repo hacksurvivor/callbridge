@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { ConvexProvider, ConvexReactClient, useConvexAuth } from 'convex/react';
 
 import { AccessState, LiveWorkspace } from '../../web/src/ProductionApp';
@@ -35,12 +35,21 @@ function AuthenticatedWorkspace() {
 }
 
 export function CallBridgeClient({ convexUrl }: { convexUrl: string }) {
-  const convex = useMemo(() => new ConvexReactClient(convexUrl), [convexUrl]);
+  const [convex, setConvex] = useState<ConvexReactClient | null>(null);
 
   useEffect(() => {
-    convex.setAuth(fetchChatGPTAccessToken);
-    return () => convex.clearAuth();
-  }, [convex]);
+    const client = new ConvexReactClient(convexUrl);
+    client.setAuth(fetchChatGPTAccessToken);
+    setConvex(client);
+    return () => {
+      client.clearAuth();
+      void client.close();
+    };
+  }, [convexUrl]);
+
+  if (!convex) {
+    return <AccessState kicker="Secure session" title="Connecting your CallBridge workspace" />;
+  }
 
   return (
     <ConvexProvider client={convex}>
