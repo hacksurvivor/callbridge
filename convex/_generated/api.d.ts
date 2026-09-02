@@ -52,6 +52,7 @@ import type * as retries from "../retries.js";
 import type * as sensitiveDisclosures from "../sensitiveDisclosures.js";
 import type * as systemReadiness from "../systemReadiness.js";
 import type * as taskActivityEvents from "../taskActivityEvents.js";
+import type * as taskArtifacts from "../taskArtifacts.js";
 import type * as taskLifecycle from "../taskLifecycle.js";
 import type * as taskSharing from "../taskSharing.js";
 import type * as taskTranscripts from "../taskTranscripts.js";
@@ -110,6 +111,7 @@ declare const fullApi: ApiFromModules<{
   sensitiveDisclosures: typeof sensitiveDisclosures;
   systemReadiness: typeof systemReadiness;
   taskActivityEvents: typeof taskActivityEvents;
+  taskArtifacts: typeof taskArtifacts;
   taskLifecycle: typeof taskLifecycle;
   taskSharing: typeof taskSharing;
   taskTranscripts: typeof taskTranscripts;

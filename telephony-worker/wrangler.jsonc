@@ -14,7 +14,7 @@
     "CALLBRIDGE_GEO_PERMISSION_MODE": "just_in_time_low_risk",
     "CALLBRIDGE_MAX_PSTN_RATE_USD": "2.00",
     "CALLBRIDGE_MAX_PSTN_CALL_USD": "6.00",
-    "CALLBACK_URL": "https://graceful-cormorant-438.eu-west-1.convex.site/webhooks/inquiry-worker"
+    "CALLBACK_URL": "https://hardy-hedgehog-401.convex.site/webhooks/inquiry-worker"
   },
   "durable_objects": {
     "bindings": [
