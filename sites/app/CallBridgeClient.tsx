@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, type ComponentType } from 'react';
-import { ConvexProvider, ConvexReactClient, useConvexAuth } from 'convex/react';
+import { ConvexProvider, ConvexReactClient } from 'convex/react';
 
 type SessionResponse = { token?: string; error?: string };
 
@@ -48,12 +48,17 @@ function AccessState({ kicker, title, detail }: { kicker: string; title: string;
   );
 }
 
-function AuthenticatedWorkspace({ Workspace }: { Workspace: ComponentType }) {
-  const auth = useConvexAuth();
-  if (auth.isLoading) {
+function AuthenticatedWorkspace({
+  Workspace,
+  authState,
+}: {
+  Workspace: ComponentType;
+  authState: 'connecting' | 'ready' | 'failed';
+}) {
+  if (authState === 'connecting') {
     return <AccessState kicker="Secure session" title="Connecting your CallBridge workspace" />;
   }
-  if (!auth.isAuthenticated) {
+  if (authState === 'failed') {
     return (
       <AccessState
         kicker="Secure session"
@@ -68,12 +73,21 @@ function AuthenticatedWorkspace({ Workspace }: { Workspace: ComponentType }) {
 export function CallBridgeClient({ convexUrl }: { convexUrl: string }) {
   const [convex, setConvex] = useState<ConvexReactClient | null>(null);
   const [Workspace, setWorkspace] = useState<ComponentType | null>(null);
+  const [authState, setAuthState] = useState<'connecting' | 'ready' | 'failed'>('connecting');
 
   useEffect(() => {
+    let active = true;
     const client = new ConvexReactClient(convexUrl);
-    client.setAuth(fetchChatGPTAccessToken);
+    client.setAuth(async () => {
+      const token = await fetchChatGPTAccessToken();
+      if (active && !token) setAuthState('failed');
+      return token;
+    }, (isAuthenticated) => {
+      if (active && isAuthenticated) setAuthState('ready');
+    });
     setConvex(client);
     return () => {
+      active = false;
       client.clearAuth();
       void client.close();
     };
@@ -93,7 +107,7 @@ export function CallBridgeClient({ convexUrl }: { convexUrl: string }) {
 
   return (
     <ConvexProvider client={convex}>
-      <AuthenticatedWorkspace Workspace={Workspace} />
+      <AuthenticatedWorkspace Workspace={Workspace} authState={authState} />
     </ConvexProvider>
   );
 }
