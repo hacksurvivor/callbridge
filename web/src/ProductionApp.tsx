@@ -39,7 +39,7 @@ function readConfiguration(): Configuration | null {
   return { convexUrl, workosClientId, redirectUri };
 }
 
-function AccessState({
+export function AccessState({
   action,
   detail,
   kicker,
@@ -66,7 +66,7 @@ function AccessState({
   );
 }
 
-function LiveWorkspace() {
+export function LiveWorkspace() {
   const convex = useConvex();
   const [draft, setDraft] = useState<InquiryTaskSnapshot | null>(null);
   const [activity, setActivity] = useState<InquiryActivityEvent[]>([]);
