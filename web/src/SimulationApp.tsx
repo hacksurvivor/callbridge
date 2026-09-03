@@ -4,6 +4,7 @@ import type { InquiryCallContract } from "../../shared/inquiryContracts.js";
 import App, { type ConfirmationUiState } from "./App.js";
 import {
   confirmInquirySimulation,
+  beginInquirySimulationExecution,
   completeInquirySimulationFixture,
   answerSimulationArtifactQuestion,
   beginSimulationArtifactFixture,
@@ -40,6 +41,18 @@ export function SimulationApp({ visualFixture }: { visualFixture?: "approved" | 
     const timeout = window.setTimeout(() => prepareInquirySimulation(), 250);
     return () => window.clearTimeout(timeout);
   }, [draft.confirmation.state, draft.status]);
+
+  useEffect(() => {
+    if (visualFixture) return;
+    if (draft.status === "confirmed") {
+      const timeout = window.setTimeout(() => beginInquirySimulationExecution(), 450);
+      return () => window.clearTimeout(timeout);
+    }
+    if (draft.status === "in_progress") {
+      const timeout = window.setTimeout(() => completeInquirySimulationFixture(), 1_400);
+      return () => window.clearTimeout(timeout);
+    }
+  }, [draft.status, visualFixture]);
 
   const update = async (contract: InquiryCallContract) => {
     try {

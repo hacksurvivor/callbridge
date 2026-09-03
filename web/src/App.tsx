@@ -59,7 +59,8 @@ function categoryLabel(category: string): string {
 function assistantCopy(status: InquiryTaskStatus, destination: string, result: GetInquiryResultOutput): string {
   if (result.status === "ready") return `The evidence-bound result for ${destination} is ready below. I kept facts separate from raw provider data and hidden reasoning.`;
   if (result.status === "processing") return "The call has ended. I’m checking the accepted evidence before presenting a factual result.";
-  if (["confirmed", "in_progress"].includes(status)) {
+  if (status === "confirmed") return `The approved task for ${destination} is queued for one controlled attempt. Automatic retry remains disabled.`;
+  if (status === "in_progress") {
     return `The approved task for ${destination} is in progress. Factual milestones will stream into the timeline as they are recorded.`;
   }
   return `I prepared an information-only call plan for ${destination}. Review the exact questions, shareable facts, authority limits, and price before confirming this revision.`;
@@ -258,7 +259,7 @@ export default function App({
             />
             <main className="conversation-main">
               <AssistantThread>
-                <InThreadTimeline events={activity} snapshot={draft} onOpenActivity={() => setContextPanel("activity")} />
+                <InThreadTimeline events={activity} snapshot={draft} status={status} onOpenActivity={() => setContextPanel("activity")} />
                 <ArtifactRegistry artifacts={artifacts} {...(onArtifactAnswer ? { onAnswer: onArtifactAnswer } : {})} {...(onArtifactAuthorize ? { onAuthorize: onArtifactAuthorize } : {})} />
                 <CallBrief
                   approvalState={confirmation.state === "pending" ? "running" : confirmation.state === "confirmed" ? "done" : "request"}
@@ -269,7 +270,7 @@ export default function App({
                   status={status}
                 />
                 {transportSaveError ? <p className="confirmation-message error" role="alert">{transportSaveError}</p> : null}
-                {confirmation.state !== "idle" ? <p className={`confirmation-message ${confirmation.state}`} role="status">{confirmation.message}</p> : null}
+                {confirmation.state !== "idle" && (confirmation.state !== "confirmed" || status === "confirmed") ? <p className={`confirmation-message ${confirmation.state}`} role="status">{confirmation.message}</p> : null}
                 {refreshHealth.state === "degraded" ? <section className="result-state error" role="alert"><span>Live updates paused</span><strong>CallBridge could not refresh the task twice in a row.</strong><small>{refreshHealth.lastUpdatedAt ? `Last factual update ${new Date(refreshHealth.lastUpdatedAt).toLocaleTimeString()}. Reload to reconnect.` : "Reload this page to reconnect. No result has been invented."}</small></section> : null}
                 {result.status === "processing" ? <section className="result-state" role="status"><span className="stream-pulse" /><strong>Checking accepted call evidence…</strong></section> : null}
                 {result.status === "failed" ? <section className="result-state error" role="alert"><span>Result unavailable</span><strong>The call evidence could not be projected safely.</strong><small>No answer was invented and automatic retry is disabled.</small></section> : null}

@@ -324,49 +324,114 @@ export function confirmInquirySimulation(): InquiryTaskSnapshot {
   return next;
 }
 
+export function beginInquirySimulationExecution(): InquiryTaskSnapshot {
+  if (currentDraft.status === "in_progress") return currentDraft;
+  if (currentDraft.status !== "confirmed") return currentDraft;
+  const occurredAt = new Date().toISOString();
+  const next: InquiryTaskSnapshot = {
+    ...currentDraft,
+    status: "in_progress",
+    updatedAt: occurredAt,
+  };
+  events = [...events,
+    {
+      eventId: "simulation:credit-reserved",
+      sequence: events.length + 1,
+      type: "credit_reserved",
+      source: "callbridge_server",
+      revision: next.revision,
+      executionRevision: next.executionRevision,
+      occurredAt,
+    },
+    {
+      eventId: "simulation:attempt-queued",
+      sequence: events.length + 2,
+      type: "attempt_queued",
+      source: "callbridge_server",
+      revision: next.revision,
+      executionRevision: next.executionRevision,
+      occurredAt,
+    },
+    {
+      eventId: "simulation:dialing",
+      sequence: events.length + 3,
+      type: "dialing",
+      source: "telephony_worker",
+      revision: next.revision,
+      executionRevision: next.executionRevision,
+      occurredAt,
+    },
+  ];
+  publish(next);
+  return next;
+}
+
 export function completeInquirySimulationFixture(): InquiryTaskSnapshot {
   if (currentDraft.status === "completed" && currentResult.status === "ready") return currentDraft;
-  const terminalAt = "2026-08-26T07:02:14.000Z";
-  const answers = [
-    {
-      questionId: "latest-check-in-time",
-      status: "reported" as const,
+  const terminalAt = new Date().toISOString();
+  const fixtureAnswers: Record<string, { value: string; sourceExcerpt: string }> = {
+    "latest-check-in-time": {
       value: "The front desk accepts arrivals until 1:00 a.m.",
-      evidence: { sourceEventId: "simulation:answer:latest-check-in-time", sourceExcerpt: "Check-in is possible until 1 a.m." },
+      sourceExcerpt: "Check-in is possible until 1 a.m.",
     },
-    {
-      questionId: "advance-notice-required",
-      status: "reported" as const,
+    "advance-notice-required": {
       value: "The hotel asks guests arriving after midnight to call ahead.",
-      evidence: { sourceEventId: "simulation:answer:advance-notice-required", sourceExcerpt: "Please call us before midnight if you will arrive late." },
+      sourceExcerpt: "Please call us before midnight if you will arrive late.",
     },
-    {
-      questionId: "late-arrival-fee",
-      status: "reported" as const,
+    "late-arrival-fee": {
       value: "The hotel did not state a late-arrival fee.",
-      evidence: { sourceEventId: "simulation:answer:late-arrival-fee", sourceExcerpt: "There is no additional late-arrival charge." },
+      sourceExcerpt: "There is no additional late-arrival charge.",
     },
-  ];
-  const callEvents: InquiryActivityEvent[] = [
-    { eventId: "simulation:connected", sequence: events.length + 1, type: "connected", source: "telephony_worker", revision: currentDraft.revision, executionRevision: currentDraft.executionRevision, occurredAt: "2026-08-26T07:00:27.000Z" },
-    { eventId: "simulation:disclosure", sequence: events.length + 2, type: "disclosure_delivered", source: "telephony_worker", revision: currentDraft.revision, executionRevision: currentDraft.executionRevision, occurredAt: "2026-08-26T07:00:34.000Z" },
-    ...answers.flatMap((answer, index): InquiryActivityEvent[] => [
-      { eventId: `simulation:question:${answer.questionId}`, sequence: events.length + 3 + index * 2, type: "question_started", source: "telephony_worker", revision: currentDraft.revision, executionRevision: currentDraft.executionRevision, occurredAt: `2026-08-26T07:0${index}:40.000Z`, questionId: answer.questionId },
-      { eventId: answer.evidence.sourceEventId, sequence: events.length + 4 + index * 2, type: "answer_observed", source: "telephony_worker", revision: currentDraft.revision, executionRevision: currentDraft.executionRevision, occurredAt: `2026-08-26T07:0${index}:50.000Z`, questionId: answer.questionId },
-    ]),
-    { eventId: "simulation:ended", sequence: events.length + 9, type: "call_ended", source: "telephony_worker", revision: currentDraft.revision, executionRevision: currentDraft.executionRevision, occurredAt: terminalAt },
-    { eventId: "simulation:result-ready", sequence: events.length + 10, type: "result_ready", source: "callbridge_server", revision: currentDraft.revision, executionRevision: currentDraft.executionRevision, occurredAt: terminalAt },
-  ];
+  };
+  const answers = currentDraft.contract.questions.map((question) => {
+    const fixture = fixtureAnswers[question.id];
+    if (!fixture) return { questionId: question.id, status: "not_answered" as const, value: null, evidence: null };
+    return {
+      questionId: question.id,
+      status: "reported" as const,
+      value: fixture.value,
+      evidence: { sourceEventId: `simulation:answer:${question.id}`, sourceExcerpt: fixture.sourceExcerpt },
+    };
+  });
+  const answered = answers.filter((answer) => answer.status === "reported");
+  const unresolvedQuestionIds = answers.filter((answer) => answer.status !== "reported").map(({ questionId }) => questionId);
+  let nextSequence = events.length;
+  const callEvents: InquiryActivityEvent[] = [];
+  const appendCallEvent = (
+    eventId: string,
+    type: InquiryActivityEvent["type"],
+    source: InquiryActivityEvent["source"],
+    questionId?: string,
+  ) => {
+    callEvents.push({
+      eventId,
+      sequence: ++nextSequence,
+      type,
+      source,
+      revision: currentDraft.revision,
+      executionRevision: currentDraft.executionRevision,
+      occurredAt: terminalAt,
+      ...(questionId ? { questionId } : {}),
+    });
+  };
+  appendCallEvent("simulation:connected", "connected", "telephony_worker");
+  appendCallEvent("simulation:disclosure", "disclosure_delivered", "telephony_worker");
+  for (const answer of answers) {
+    appendCallEvent(`simulation:question:${answer.questionId}`, "question_started", "telephony_worker", answer.questionId);
+    if (answer.evidence) appendCallEvent(answer.evidence.sourceEventId, "answer_observed", "telephony_worker", answer.questionId);
+  }
+  appendCallEvent("simulation:ended", "call_ended", "telephony_worker");
+  appendCallEvent("simulation:result-ready", "result_ready", "callbridge_server");
   events = [...events, ...callEvents];
   currentResult = {
     status: "ready",
     result: {
       schemaVersion: 1,
       executionRevision: currentDraft.executionRevision,
-      outcome: "answered",
-      summary: "Late arrival is possible until 1:00 a.m. The hotel asks Maya to call ahead before midnight and stated there is no additional late-arrival charge.",
+      outcome: unresolvedQuestionIds.length ? answered.length ? "partial" : "no_answer" : "answered",
+      summary: answered.length ? answered.map(({ value }) => value).join(" ") : "The simulated call ended without an answer to the prepared questions.",
       answers,
-      unresolvedQuestionIds: [],
+      unresolvedQuestionIds,
       durationSeconds: 107,
       disclosureStatus: "delivered",
       commitmentSafety: "none_observed",
@@ -378,12 +443,12 @@ export function completeInquirySimulationFixture(): InquiryTaskSnapshot {
       taskId: currentDraft.taskId,
       attemptId: "simulation_attempt",
       executionRevision: currentDraft.executionRevision,
-      outcome: "answered",
+      outcome: unresolvedQuestionIds.length ? answered.length ? "partial" : "no_answer" : "answered",
       callLanguage: currentDraft.contract.languages.call,
       resultLanguage: currentDraft.contract.languages.result,
-      answeredQuestionIds: answers.map(({ questionId }) => questionId),
-      unresolvedQuestionIds: [],
-      sourceEventIds: answers.map(({ evidence }) => evidence.sourceEventId).sort(),
+      answeredQuestionIds: answered.map(({ questionId }) => questionId),
+      unresolvedQuestionIds,
+      sourceEventIds: answered.flatMap(({ evidence }) => evidence ? [evidence.sourceEventId] : []).sort(),
       durationSeconds: 107,
       terminalReason: "completed",
       disclosureStatus: "delivered",

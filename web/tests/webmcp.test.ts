@@ -3,6 +3,13 @@ import { describe, expect, it, vi } from "vitest";
 import { INQUIRY_TOOL_NAMES } from "../../shared/inquiryWebMcp.js";
 import {
   APPROVED_INQUIRY_FIXTURE,
+  beginInquirySimulationExecution,
+  completeInquirySimulationFixture,
+  confirmInquirySimulation,
+  getInquirySimulationEvents,
+  getInquirySimulationResult,
+  getInquirySimulationSnapshot,
+  prepareInquirySimulation,
   simulationInquiryClient,
 } from "../src/simulation/inquirySimulation.js";
 import {
@@ -242,5 +249,30 @@ describe("CallBridge generalized WebMCP registration", () => {
     expect(repeated.contract.category).toBe("government");
     expect(repeated.contract.destination.countryCode).toBe("MD");
     expect(repeated.confirmation.state).toBe("revoked");
+  });
+
+  it("runs the safe simulation through confirmed, in-progress, and evidence-bound result states", async () => {
+    const signal = new AbortController().signal;
+    const created = await simulationInquiryClient.createCallDraft({
+      schemaVersion: 1,
+      idempotencyKey: "complete-simulation-flow",
+      contract: structuredClone(APPROVED_INQUIRY_FIXTURE),
+    }, signal);
+    expect(created.status).toBe("draft");
+
+    prepareInquirySimulation();
+    expect(confirmInquirySimulation().status).toBe("confirmed");
+    expect(beginInquirySimulationExecution().status).toBe("in_progress");
+    expect(completeInquirySimulationFixture().status).toBe("completed");
+
+    const result = getInquirySimulationResult();
+    expect(result.status).toBe("ready");
+    if (result.status !== "ready") return;
+    expect(result.result.answers.map(({ questionId }) => questionId)).toEqual(
+      getInquirySimulationSnapshot().contract.questions.map(({ id }) => id),
+    );
+    expect(result.receipt.answeredQuestionIds).toHaveLength(3);
+    const eventTimes = getInquirySimulationEvents().map(({ occurredAt }) => new Date(occurredAt).getTime());
+    expect(eventTimes).toEqual([...eventTimes].sort((left, right) => left - right));
   });
 });

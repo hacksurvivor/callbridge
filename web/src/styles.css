@@ -142,7 +142,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, summary:focus
 .compact-task-copy strong { font-size: 13px; font-weight: 500; }
 .compact-task-copy small { color: var(--quiet); font-size: 11px; }
 .compact-task-action { margin-left: 4px; color: var(--cb-muted); font-size: 12px; }
-.callbridge-approval-wrap { padding: 16px; border-top: 1px solid var(--line); background: #fafafa; }
+.callbridge-approval-wrap { padding: 16px; scroll-margin-block: 72px 150px; border-top: 1px solid var(--line); background: #fafafa; }
 .activity-source { display: grid; gap: 8px; }
 .activity-source > span { color: var(--quiet); font-size: 11px; font-weight: 600; }
 .relay-sidebar [data-slot="thread-list"] { max-width: none; }
@@ -166,6 +166,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, summary:focus
 .destination-name span { color: var(--cb-muted); font-size: 11px; }
 .verified { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; color: var(--cb-muted); font-size: 10px; white-space: nowrap; }
 .brief-body { padding: 0 15px; }
+.inline-call-plan.is-editing .brief-row, .inline-call-plan.is-editing .disclosure { display: none; }
+.inline-call-plan.is-editing .brief-editor { border-top: 0; }
 .brief-row { display: grid; grid-template-columns: 118px minmax(0, 1fr); gap: 18px; padding: 15px 0; border-bottom: 1px solid var(--line); }
 .brief-label { color: var(--cb-muted); font-size: 11px; }
 .brief-content { color: #343434; font-size: 13px; line-height: 1.5; }

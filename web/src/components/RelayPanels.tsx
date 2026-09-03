@@ -17,19 +17,21 @@ function eventTime(value: string): string {
 export function InThreadTimeline({
   events,
   snapshot,
+  status,
   onOpenActivity,
 }: {
   events: readonly InquiryActivityEvent[];
   snapshot: InquiryTaskSnapshot;
+  status: InquiryTaskStatus;
   onOpenActivity: () => void;
 }) {
   const hasResearch = events.length > 1 || snapshot.pricing.status === "ready";
   const approved = snapshot.confirmation.state === "confirmed";
-  const terminal = ["completed", "partial", "failed", "stopped"].includes(snapshot.status);
+  const terminal = ["completed", "partial", "failed", "stopped"].includes(status);
   const completed = [true, hasResearch, approved, terminal].filter(Boolean).length;
   const label = terminal
-    ? snapshot.status === "completed" ? "Call complete" : snapshot.status === "partial" ? "Partial result" : "Call ended"
-    : snapshot.status === "in_progress" ? "Call in progress"
+    ? status === "completed" ? "Call complete" : status === "partial" ? "Partial result" : "Call ended"
+    : status === "in_progress" ? "Call in progress"
       : approved ? "Call approved"
         : "Plan ready";
   return (
@@ -67,7 +69,11 @@ function ActivityContent({
     when: "future",
     time: "Next",
     title: "Call and report back",
-    detail: "Waiting for the approved task.",
+    detail: status === "confirmed"
+      ? "One controlled attempt is queued."
+      : status === "in_progress"
+        ? "The approved call is in progress."
+        : "Waiting for your approval.",
   });
   return (
     <>

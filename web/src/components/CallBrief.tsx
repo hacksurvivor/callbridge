@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type MouseEventHandler } from "react";
+import { useEffect, useRef, useState, type FormEvent, type MouseEventHandler } from "react";
 
 import type { InquiryCallContract } from "../../../shared/inquiryContracts.js";
 import type { InquiryTaskSnapshot, InquiryTaskStatus } from "../../../shared/inquiryState.js";
@@ -108,6 +108,7 @@ export function CallBrief({
   const [reviewing, setReviewing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const approvalRef = useRef<HTMLDivElement>(null);
   const [objective, setObjective] = useState(contract.objective);
   const [questions, setQuestions] = useState(contract.questions.map(({ prompt }) => prompt).join("\n"));
   const [privateBackground, setPrivateBackground] = useState(contract.context.privateBackground ?? "");
@@ -125,6 +126,20 @@ export function CallBrief({
     setSaving(false);
     setSaveError(null);
   }, [contract, revision]);
+
+  useEffect(() => {
+    if (presentation.editable) return;
+    setEditing(false);
+    setReviewing(false);
+  }, [presentation.editable]);
+
+  useEffect(() => {
+    if (!reviewing || !presentation.editable) return;
+    const frame = window.requestAnimationFrame(() => {
+      approvalRef.current?.scrollIntoView({ block: "center" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [presentation.editable, reviewing]);
 
   const save = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -155,11 +170,26 @@ export function CallBrief({
 
   return (
     <>
-      <section className={`brief inline-call-plan ${reviewing || editing ? "is-expanded" : ""}`} aria-label="Exact call plan">
+      <section className={`brief inline-call-plan ${reviewing || editing ? "is-expanded" : ""} ${editing ? "is-editing" : ""}`} aria-label="Exact call plan">
         <div className="call-plan-heading">
           <div><h2>{presentation.editable ? `Ready to call ${contract.destination.displayName}` : `${presentation.title}: ${contract.destination.displayName}`}</h2><p>{contract.questions.length} questions · {languageName(contract.languages.call)} · one call</p></div>
           <span className={`plan-state-label ${presentation.editable ? "is-approval" : ""}`}>{presentation.kicker}</span>
         </div>
+        {reviewing && presentation.editable ? (
+          <div ref={approvalRef} className="callbridge-approval-wrap" role="region" aria-label="Final confirmation">
+            <ApprovalCard
+              state={approvalState}
+              title={`Place one call to ${contract.destination.displayName}?`}
+              subtitle={`Draft v${revision} · ${contract.questions.length} questions · no automatic retry`}
+              command={`${maskPhoneNumber(contract.destination.e164PhoneNumber)} · ${languageName(contract.languages.call)} · information only`}
+              denyLabel="Go back"
+              allowOnceLabel="Confirm one call"
+              onDeny={() => setReviewing(false)}
+              {...(!confirmationDisabled && onConfirm ? { onAllowOnce: onConfirm } : {})}
+              className="max-w-none"
+            />
+          </div>
+        ) : null}
         {reviewing || editing ? (
           <div className="plan-details">
             <div className="destination-row">
@@ -221,26 +251,13 @@ export function CallBrief({
             </div>
           </div>
         ) : null}
-        <div className="brief-footer">
-          <p className="approval-copy">{presentation.footerDetail(revision)}</p>
-          <div className="brief-actions">
-            {presentation.editable ? <button className="button secondary" type="button" aria-expanded={editing} onClick={() => { setReviewing(false); setEditing((value) => !value); }}>{editing ? "Close editor" : "Edit"}</button> : null}
-            <button className={presentation.editable ? "button primary" : "button secondary"} type="button" disabled={presentation.editable && (confirmationDisabled || editing)} onClick={() => setReviewing((value) => !value)}>{reviewing ? "Close" : presentation.editable ? "Review and confirm" : "View details"}</button>
-          </div>
-        </div>
-        {reviewing && presentation.editable ? (
-          <div className="callbridge-approval-wrap" role="region" aria-label="Final confirmation">
-            <ApprovalCard
-              state={approvalState}
-              title={`Place one call to ${contract.destination.displayName}?`}
-              subtitle={`Draft v${revision} · ${contract.questions.length} questions · no automatic retry`}
-              command={`${maskPhoneNumber(contract.destination.e164PhoneNumber)} · ${languageName(contract.languages.call)} · information only`}
-              denyLabel="Go back"
-              allowOnceLabel="Confirm one call"
-              onDeny={() => setReviewing(false)}
-              {...(!confirmationDisabled && onConfirm ? { onAllowOnce: onConfirm } : {})}
-              className="max-w-none"
-            />
+        {!presentation.editable || (!reviewing && !editing) ? (
+          <div className="brief-footer">
+            <p className="approval-copy">{presentation.footerDetail(revision)}</p>
+            <div className="brief-actions">
+              {presentation.editable ? <button className="button secondary" type="button" onClick={() => { setReviewing(false); setEditing(true); }}>Edit</button> : null}
+              <button className={presentation.editable ? "button primary" : "button secondary"} type="button" disabled={presentation.editable && confirmationDisabled} onClick={() => setReviewing((value) => !value)}>{reviewing ? "Close" : presentation.editable ? "Review and confirm" : "View details"}</button>
+            </div>
           </div>
         ) : null}
       </section>
