@@ -1,5 +1,8 @@
 import {
   AssistantRuntimeProvider,
+  CompositeAttachmentAdapter,
+  SimpleImageAttachmentAdapter,
+  SimpleTextAttachmentAdapter,
   unstable_createMessageConverter as createMessageConverter,
   useAssistantTransportRuntime,
   type AssistantTransportCommand,
@@ -7,6 +10,7 @@ import {
   type ThreadMessageLike,
 } from "@assistant-ui/react";
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 import type { InquiryCallContract } from "../../shared/inquiryContracts.js";
 import type { GetInquiryResultOutput, InquiryActivityEvent } from "../../shared/inquiryWebMcp.js";
@@ -82,6 +86,11 @@ const transportMessageConverter = createMessageConverter((message: CallBridgeTra
   createdAt: new Date(message.createdAt),
   ...(message.status ? { status: message.status } : {}),
 }));
+
+const attachmentAdapter = new CompositeAttachmentAdapter([
+  new SimpleImageAttachmentAdapter(),
+  new SimpleTextAttachmentAdapter(),
+]);
 
 function commandText(command: AssistantTransportCommand): string {
   if (command.type !== "add-message" || command.message.role !== "user") return "";
@@ -160,6 +169,14 @@ export default function App({
           ...(!isStreaming ? { result: { status, revision: draft.revision } } : {}),
         },
         { type: "text", text: assistantCopy(status, destination, result), status: isStreaming ? { type: "running" } : { type: "complete" } },
+        ...(draft.contract.destination.website ? [{
+          type: "source" as const,
+          sourceType: "url" as const,
+          id: `${draft.taskId}:destination-source`,
+          url: draft.contract.destination.website,
+          title: draft.contract.destination.displayName,
+          status: { type: "complete" as const },
+        }] : []),
       ],
       status: isStreaming ? { type: "running" } : { type: "complete", reason: "stop" },
     }],
@@ -195,6 +212,7 @@ export default function App({
     protocol: "assistant-transport",
     headers: { "Content-Type": "application/json" },
     converter: persistentTransportConverter,
+    adapters: { attachments: attachmentAdapter },
     prepareSendCommandsRequest: (body) => {
       const revisionNotes = body.commands.map(commandText).filter(Boolean);
       pendingRevisionNotesRef.current = revisionNotes;
@@ -243,12 +261,14 @@ export default function App({
 
   return (
     <AssistantRuntimeProvider runtime={runtime}>
+      <TooltipProvider delayDuration={250}>
       <div className="app-shell chatgpt-app">
         {simulation ? <div className="simulation-banner">Simulation · no phone call can be placed</div> : null}
         <div className={`relay-workspace ${contextPanel ? "has-context-panel" : ""}`}>
           {navigationOpen ? <button className="navigation-scrim mobile-only" aria-label="Close conversations" onClick={() => setNavigationOpen(false)} type="button" /> : null}
           <RelaySidebar currentTitle={`${category} for ${destination}`} media={media} mobileOpen={navigationOpen} onClose={() => setNavigationOpen(false)} onOpenGallery={() => setContextPanel("gallery")} />
           <section className="chat-surface">
+            <h1 className="sr-only">{category} for {destination}</h1>
             <Header
               title={`${category} for ${destination}`}
               status={statusLabel(status)}
@@ -257,10 +277,16 @@ export default function App({
               onOpenNavigation={() => setNavigationOpen(true)}
             />
             <main className="conversation-main">
-              <AssistantThread onOpenGallery={() => setContextPanel("gallery")}>
+              <AssistantThread>
                 <InThreadTimeline events={activity} snapshot={draft} onOpenActivity={() => setContextPanel("activity")} />
                 <ArtifactRegistry artifacts={artifacts} {...(onArtifactAnswer ? { onAnswer: onArtifactAnswer } : {})} {...(onArtifactAuthorize ? { onAuthorize: onArtifactAuthorize } : {})} />
-                <CallBrief confirmationDisabled={confirmationDisabled} onConfirm={onConfirm} onUpdate={onUpdate} snapshot={draft} />
+                <CallBrief
+                  approvalState={confirmation.state === "pending" ? "running" : confirmation.state === "confirmed" ? "done" : "request"}
+                  confirmationDisabled={confirmationDisabled}
+                  onConfirm={onConfirm}
+                  onUpdate={onUpdate}
+                  snapshot={draft}
+                />
                 {transportSaveError ? <p className="confirmation-message error" role="alert">{transportSaveError}</p> : null}
                 {confirmation.state !== "idle" ? <p className={`confirmation-message ${confirmation.state}`} role="status">{confirmation.message}</p> : null}
                 {refreshHealth.state === "degraded" ? <section className="result-state error" role="alert"><span>Live updates paused</span><strong>CallBridge could not refresh the task twice in a row.</strong><small>{refreshHealth.lastUpdatedAt ? `Last factual update ${new Date(refreshHealth.lastUpdatedAt).toLocaleTimeString()}. Reload to reconnect.` : "Reload this page to reconnect. No result has been invented."}</small></section> : null}
@@ -282,6 +308,7 @@ export default function App({
           />
         </div>
       </div>
+      </TooltipProvider>
     </AssistantRuntimeProvider>
   );
 }

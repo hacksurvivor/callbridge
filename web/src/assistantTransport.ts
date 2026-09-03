@@ -4,6 +4,7 @@ export type CallBridgeTransportPart =
   | { type: "text"; text: string; status?: TransportPartStatus }
   | { type: "reasoning"; text: string; status?: TransportPartStatus }
   | { type: "image"; image: string }
+  | { type: "source"; sourceType: "url"; id: string; url: string; title?: string; status: { type: "complete" } }
   | {
       type: "tool-call";
       toolCallId: string;

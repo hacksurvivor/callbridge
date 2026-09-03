@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { TaskArtifact } from "../../../shared/taskArtifacts.js";
 import { evidenceAssets } from "./ArtifactRegistry.js";
 import { CallBridgeIcon, CloseIcon, GalleryIcon, SearchIcon } from "./Icons.js";
+import { ThreadList } from "@/components/assistant-ui/elements/thread-list";
 
 export type TaskMedia = {
   artifactId: string;
@@ -60,14 +61,8 @@ export function RelaySidebar({
         </label>
       ) : null}
       <section className="conversation-section" aria-labelledby="recent-title">
-        <h2 id="recent-title">Today</h2>
-        <div className="thread-list">
-          {matchesCurrent ? (
-            <button className="thread-list-trigger is-active" type="button" onClick={onClose} aria-current="page">
-              <span>{currentTitle}</span>
-            </button>
-          ) : <p className="sidebar-empty">No chats found</p>}
-        </div>
+        <h2 className="sr-only" id="recent-title">Conversations</h2>
+        {matchesCurrent ? <ThreadList threads={[{ title: currentTitle, time: "Now" }]} activeIndex={0} onActiveIndexChange={() => onClose?.()} showActions={false} className="max-w-none" /> : <p className="sidebar-empty">No chats found</p>}
       </section>
       <div className="sidebar-profile">
         <span className="avatar" aria-hidden="true">A</span>

@@ -1,6 +1,8 @@
 import { defineConfig, type Plugin, type ViteDevServer } from "vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { fileURLToPath, URL } from "node:url";
 
 import { handleCallBridgeAssistantTransport } from "./src/assistantTransportServer.js";
 
@@ -59,7 +61,12 @@ function assistantTransportDevEndpoint(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), assistantTransportDevEndpoint()],
+  plugins: [react(), tailwindcss(), assistantTransportDevEndpoint()],
+  resolve: {
+    alias: {
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
+    },
+  },
   build: {
     rolldownOptions: {
       output: {

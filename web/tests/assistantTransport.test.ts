@@ -10,12 +10,17 @@ function transportRequest(body: unknown, method = "POST"): Request {
   });
 }
 
-function validBody(text = "Please note that Maya may arrive at 01:30.") {
+type TestPart = { type: "text"; text: string } | { type: "image"; image: string };
+
+function validBody(
+  text = "Please note that Maya may arrive at 01:30.",
+  parts: TestPart[] = [{ type: "text", text }],
+) {
   return {
     state: { messages: [] },
     commands: [{
       type: "add-message",
-      message: { role: "user", parts: [{ type: "text", text }] },
+      message: { role: "user", parts },
       parentId: null,
       sourceId: null,
     }],
@@ -59,6 +64,20 @@ describe("CallBridge Assistant Transport endpoint", () => {
     expect(stream).not.toContain('"toolName":"confirm_call"');
     expect(stream).not.toContain('"toolName":"place_call"');
     expect(stream).not.toContain('"toolName":"retry_call"');
+  });
+
+  it("accepts image attachments as private message context", async () => {
+    const image = "data:image/png;base64,iVBORw0KGgo=";
+    const response = await handleCallBridgeAssistantTransport(
+      transportRequest(validBody("", [{ type: "image", image }])),
+      { tokenDelayMs: 0 },
+    );
+    const stream = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(stream).toContain('"type":"image"');
+    expect(stream).toContain(image);
+    expect(appendedText(stream, "2")).toContain("Nothing was shared and no call was placed");
   });
 
   it("rejects malformed, empty, and oversized message commands", async () => {

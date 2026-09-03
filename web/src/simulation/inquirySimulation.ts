@@ -27,6 +27,7 @@ export const APPROVED_INQUIRY_FIXTURE: InquiryCallContract = {
     e164PhoneNumber: "+81751234142",
     countryCode: "JP",
     address: "Kyoto, Japan",
+    website: "https://sakurahotel.co.jp/guide/english/house-rules/",
   },
   objective: "Find out whether Maya can arrive after midnight and what she needs to do beforehand.",
   questions: [

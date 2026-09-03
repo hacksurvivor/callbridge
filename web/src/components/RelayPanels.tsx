@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
+import { AgentPlan } from "@/components/assistant-ui/elements/agent-plan";
+import { Sources } from "@/components/assistant-ui/elements/sources.aui";
+import { Timeline, type TimelineEvent } from "@/components/assistant-ui/elements/timeline";
 
 import type { InquiryActivityEvent } from "../../../shared/inquiryWebMcp.js";
 import type { InquiryTaskSnapshot, InquiryTaskStatus } from "../../../shared/inquiryState.js";
 import { activityEventCopy, fallbackActivityEvents } from "./ActivityRail.js";
-import { ActivityIcon, CallBridgeIcon, CheckIcon, CloseIcon, GalleryIcon, LockIcon, ShieldIcon, StopIcon, ToolIcon } from "./Icons.js";
+import { ActivityIcon, CheckIcon, CloseIcon, GalleryIcon, LockIcon, ShieldIcon, StopIcon, ToolIcon } from "./Icons.js";
 import type { TaskMedia } from "./RelaySidebar.js";
 
 export type ContextPanelMode = "activity" | "gallery";
@@ -25,19 +28,16 @@ export function InThreadTimeline({
   const approved = snapshot.confirmation.state === "confirmed";
   const terminal = ["completed", "partial", "failed", "stopped"].includes(snapshot.status);
   const completed = [true, hasResearch, approved, terminal].filter(Boolean).length;
+  const steps = [
+    "Understand the request",
+    "Prepare the exact call brief",
+    approved ? "Approval recorded" : "Wait for your approval",
+    "Call once and report back",
+  ];
   return (
-    <section className="thread-timeline" aria-label="Task progress">
-      <div className="timeline-heading">
-        <div><strong>Plan</strong><span>{completed} of 4 steps complete</span></div>
-        <button className="timeline-action" type="button" onClick={onOpenActivity}>View activity</button>
-      </div>
-      <div className="timeline-progress" aria-hidden="true"><span style={{ width: `${Math.max(8, completed * 25)}%` }} /></div>
-      <ol>
-        <li className="is-complete"><span><CheckIcon /></span><strong>Understand the request</strong></li>
-        <li className={hasResearch ? "is-complete" : "is-current"}><span>{hasResearch ? <CheckIcon /> : null}</span><strong>Prepare the exact call brief</strong></li>
-        <li className={approved ? "is-complete" : "is-current is-approval"}><span>{approved ? <CheckIcon /> : null}</span><strong>{approved ? "Approval recorded" : "Wait for your approval"}</strong></li>
-        <li className={terminal ? "is-complete" : ""}><span>{terminal ? <CheckIcon /> : null}</span><strong>Call once and report back</strong></li>
-      </ol>
+    <section className="callbridge-agent-plan" aria-label="Task progress">
+      <AgentPlan steps={steps} activeIndex={completed} className="max-w-none" />
+      <button className="timeline-action" type="button" onClick={onOpenActivity}>View activity</button>
     </section>
   );
 }
@@ -53,22 +53,29 @@ function ActivityContent({
 }) {
   const visibleEvents = events.length ? events : fallbackActivityEvents(snapshot);
   const terminal = ["completed", "partial", "failed", "stopped"].includes(status);
+  const timelineEvents: TimelineEvent[] = visibleEvents.map((event, index) => {
+    const copy = activityEventCopy(event, snapshot);
+    return {
+      id: event.eventId,
+      when: terminal || index < visibleEvents.length - 1 ? "past" : "now",
+      time: eventTime(event.occurredAt),
+      title: copy.title,
+      detail: copy.detail,
+    };
+  });
+  if (!terminal) timelineEvents.push({
+    id: "pending-call-result",
+    when: "future",
+    time: "Next",
+    title: "Call and report back",
+    detail: "Waiting for the approved task.",
+  });
   return (
     <>
       <section className="context-section">
         <h3>Task activity</h3>
-        <ol className="activity-sheet-list">
-          {visibleEvents.map((event) => {
-            const copy = activityEventCopy(event, snapshot);
-            return (
-              <li key={event.eventId}>
-                <span className="activity-sheet-node"><CallBridgeIcon /></span>
-                <div><strong>{copy.title}</strong><p>{copy.detail}</p><time dateTime={event.occurredAt}>{eventTime(event.occurredAt)}</time></div>
-              </li>
-            );
-          })}
-          {!terminal ? <li className="is-pending"><span className="activity-sheet-node" /><div><strong>Call and report back</strong><p>Waiting for the approved task.</p></div></li> : null}
-        </ol>
+        <Timeline events={timelineEvents} visibleCount={timelineEvents.length} className="mt-5 max-w-none border-0 p-0" />
+        {snapshot.contract.destination.website ? <div className="activity-source"><span>Source</span><Sources type="source" sourceType="url" id="destination-source" url={snapshot.contract.destination.website} title={snapshot.contract.destination.displayName} status={{ type: "complete" }} /></div> : null}
       </section>
 
       <section className="context-section">

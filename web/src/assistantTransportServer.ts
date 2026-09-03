@@ -30,6 +30,7 @@ type HandlerOptions = {
 
 const MAX_COMMANDS = 8;
 const MAX_MESSAGE_CHARACTERS = 4_000;
+const MAX_IMAGE_CHARACTERS = 6_000_000;
 const MAX_STATE_MESSAGES = 80;
 
 function jsonResponse(status: number, error: string): Response {
@@ -48,15 +49,30 @@ function isTransportMessage(value: unknown): value is CallBridgeTransportMessage
     && typeof value.createdAt === "string";
 }
 
-function readTextParts(value: unknown): string {
-  if (!isRecord(value) || !Array.isArray(value.parts)) return "";
-  return value.parts
-    .filter((part): part is { type: "text"; text: string } => (
-      isRecord(part) && part.type === "text" && typeof part.text === "string"
-    ))
-    .map((part) => part.text)
-    .join("\n")
-    .trim();
+function readMessageParts(value: unknown): AddMessageCommand["message"]["parts"] | null {
+  if (!isRecord(value) || !Array.isArray(value.parts)) return null;
+  const parts: AddMessageCommand["message"]["parts"] = [];
+  let textCharacters = 0;
+  for (const part of value.parts) {
+    if (!isRecord(part)) continue;
+    if (part.type === "text" && typeof part.text === "string") {
+      const text = part.text.trim();
+      if (!text) continue;
+      textCharacters += text.length;
+      if (textCharacters > MAX_MESSAGE_CHARACTERS) return null;
+      parts.push({ type: "text", text });
+      continue;
+    }
+    if (
+      part.type === "image"
+      && typeof part.image === "string"
+      && part.image.startsWith("data:image/")
+      && part.image.length <= MAX_IMAGE_CHARACTERS
+    ) {
+      parts.push({ type: "image", image: part.image });
+    }
+  }
+  return parts.length ? parts : null;
 }
 
 function parseTransportRequest(value: unknown): TransportRequest | null {
@@ -66,11 +82,11 @@ function parseTransportRequest(value: unknown): TransportRequest | null {
   const commands: AddMessageCommand[] = [];
   for (const command of value.commands) {
     if (!isRecord(command) || command.type !== "add-message" || !isRecord(command.message)) continue;
-    const text = readTextParts(command.message);
-    if (!text || text.length > MAX_MESSAGE_CHARACTERS) return null;
+    const parts = readMessageParts(command.message);
+    if (!parts) return null;
     commands.push({
       type: "add-message",
-      message: { role: command.message.role === "assistant" ? "assistant" : "user", parts: [{ type: "text", text }] },
+      message: { role: command.message.role === "assistant" ? "assistant" : "user", parts },
     });
   }
   if (commands.length === 0) return null;

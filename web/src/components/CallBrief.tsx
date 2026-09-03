@@ -2,10 +2,12 @@ import { useEffect, useState, type FormEvent, type MouseEventHandler } from "rea
 
 import type { InquiryCallContract } from "../../../shared/inquiryContracts.js";
 import type { InquiryTaskSnapshot } from "../../../shared/inquiryState.js";
+import { ApprovalCard, type ApprovalState } from "@/components/assistant-ui/elements/approval-card";
 import { CrossIcon, DestinationIcon, LockIcon } from "./Icons.js";
 
 type CallBriefProps = {
   confirmationDisabled?: boolean;
+  approvalState?: ApprovalState;
   onConfirm?: MouseEventHandler<HTMLButtonElement>;
   onUpdate: (contract: InquiryCallContract) => Promise<void>;
   snapshot: InquiryTaskSnapshot;
@@ -62,6 +64,7 @@ function parseShareableFacts(value: string): InquiryCallContract["context"]["sha
 
 export function CallBrief({
   confirmationDisabled = false,
+  approvalState = "request",
   onConfirm,
   onUpdate,
   snapshot,
@@ -193,16 +196,18 @@ export function CallBrief({
           </div>
         </div>
         {reviewing ? (
-          <div className="final-confirmation-step" role="region" aria-label="Final confirmation">
-            <div>
-              <span>Final confirmation · draft v{revision}</span>
-              <strong>Place one information-only call to {contract.destination.displayName}?</strong>
-              <p>The agent may ask only the {contract.questions.length} questions above, share only the listed facts, and make no commitment. Automatic retry is disabled.</p>
-            </div>
-            <div className="final-confirmation-actions">
-              <button className="button secondary" type="button" onClick={() => setReviewing(false)}>Go back</button>
-              <button className="button primary confirm-external-action" type="button" disabled={confirmationDisabled} onClick={onConfirm}>Confirm one call</button>
-            </div>
+          <div className="callbridge-approval-wrap" role="region" aria-label="Final confirmation">
+            <ApprovalCard
+              state={approvalState}
+              title={`Place one call to ${contract.destination.displayName}?`}
+              subtitle={`Draft v${revision} · ${contract.questions.length} questions · no automatic retry`}
+              command={`${maskPhoneNumber(contract.destination.e164PhoneNumber)} · ${languageName(contract.languages.call)} · information only`}
+              denyLabel="Go back"
+              allowOnceLabel="Confirm one call"
+              onDeny={() => setReviewing(false)}
+              {...(!confirmationDisabled && onConfirm ? { onAllowOnce: onConfirm } : {})}
+              className="max-w-none"
+            />
           </div>
         ) : null}
       </section>
