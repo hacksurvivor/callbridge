@@ -9,7 +9,7 @@ import {
   type AssistantTransportConnectionMetadata,
   type ThreadMessageLike,
 } from "@assistant-ui/react";
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { useCallback, useMemo, useRef, useState, type MouseEvent } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 import type { InquiryCallContract } from "../../shared/inquiryContracts.js";
@@ -63,20 +63,6 @@ function assistantCopy(status: InquiryTaskStatus, destination: string, result: G
     return `The approved task for ${destination} is in progress. Factual milestones will stream into the timeline as they are recorded.`;
   }
   return `I prepared an information-only call plan for ${destination}. Review the exact questions, shareable facts, authority limits, and price before confirming this revision.`;
-}
-
-function statusLabel(status: InquiryTaskStatus): string {
-  const labels: Partial<Record<InquiryTaskStatus, string>> = {
-    draft: "Draft",
-    awaiting_confirmation: "Waiting for approval",
-    confirmed: "Confirmed",
-    in_progress: "In progress",
-    completed: "Complete",
-    partial: "Partial result",
-    failed: "Failed",
-    stopped: "Stopped",
-  };
-  return labels[status] ?? status.replaceAll("_", " ");
 }
 
 const transportMessageConverter = createMessageConverter((message: CallBridgeTransportMessage): ThreadMessageLike => ({
@@ -144,10 +130,6 @@ export default function App({
   const isStreaming = confirmation.state === "pending" || result.status === "processing";
   const confirmationDisabled = !confirmationReady || confirmation.state === "pending" || confirmation.state === "confirmed"
     || status !== "draft" && status !== "awaiting_confirmation";
-
-  useEffect(() => {
-    if (activity.length && window.matchMedia("(min-width: 1241px)").matches) setContextPanel("activity");
-  }, [activity.length]);
 
   const initialTransportState = useMemo<CallBridgeTransportState>(() => ({
     messages: [{
@@ -270,8 +252,6 @@ export default function App({
           <section className="chat-surface">
             <h1 className="sr-only">{category} for {destination}</h1>
             <Header
-              title={`${category} for ${destination}`}
-              status={statusLabel(status)}
               onOpenActivity={() => setContextPanel("activity")}
               onOpenGallery={() => setContextPanel("gallery")}
               onOpenNavigation={() => setNavigationOpen(true)}

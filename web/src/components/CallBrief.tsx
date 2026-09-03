@@ -3,7 +3,7 @@ import { useEffect, useState, type FormEvent, type MouseEventHandler } from "rea
 import type { InquiryCallContract } from "../../../shared/inquiryContracts.js";
 import type { InquiryTaskSnapshot, InquiryTaskStatus } from "../../../shared/inquiryState.js";
 import { ApprovalCard, type ApprovalState } from "@/components/assistant-ui/elements/approval-card";
-import { CrossIcon, DestinationIcon, LockIcon } from "./Icons.js";
+import { CrossIcon, DestinationIcon } from "./Icons.js";
 
 type CallBriefProps = {
   confirmationDisabled?: boolean;
@@ -17,7 +17,6 @@ type CallBriefProps = {
 function planStateCopy(status: InquiryTaskStatus): {
   kicker: string;
   title: string;
-  footerTitle: string;
   footerDetail: (revision: number) => string;
   editable: boolean;
 } {
@@ -25,7 +24,6 @@ function planStateCopy(status: InquiryTaskStatus): {
     return {
       kicker: status === "in_progress" ? "Call in progress" : "Approval recorded",
       title: "Approved call plan",
-      footerTitle: "Approved by you",
       footerDetail: (revision) => `Draft v${revision} is locked to one attempt with no automatic retry.`,
       editable: false,
     };
@@ -35,7 +33,6 @@ function planStateCopy(status: InquiryTaskStatus): {
     return {
       kicker,
       title: "Final call plan",
-      footerTitle: "Task ended",
       footerDetail: (revision) => `Draft v${revision} is preserved as the read-only execution record.`,
       editable: false,
     };
@@ -43,8 +40,7 @@ function planStateCopy(status: InquiryTaskStatus): {
   return {
     kicker: "Approval needed",
     title: "Review the call plan",
-    footerTitle: "Only you can place this call",
-    footerDetail: (revision) => `Approval applies only to draft v${revision}. Editing the brief resets it.`,
+    footerDetail: () => "Nothing happens until you review and confirm.",
     editable: true,
   };
 }
@@ -161,9 +157,8 @@ export function CallBrief({
     <>
       <section className={`brief inline-call-plan ${reviewing || editing ? "is-expanded" : ""}`} aria-label="Exact call plan">
         <div className="call-plan-heading">
-          <span className="plan-symbol"><LockIcon /></span>
-          <div><span>{presentation.kicker}</span><h2>{presentation.title}</h2><p>{contract.questions.length} questions · {languageName(contract.languages.call)} · no booking or payment</p></div>
-          <span className="revision-chip">Draft v{revision}</span>
+          <div><h2>{presentation.editable ? `Ready to call ${contract.destination.displayName}` : `${presentation.title}: ${contract.destination.displayName}`}</h2><p>{contract.questions.length} questions · {languageName(contract.languages.call)} · one call</p></div>
+          <span className={`plan-state-label ${presentation.editable ? "is-approval" : ""}`}>{presentation.kicker}</span>
         </div>
         {reviewing || editing ? (
           <div className="plan-details">
@@ -227,10 +222,10 @@ export function CallBrief({
           </div>
         ) : null}
         <div className="brief-footer">
-          <div className="approval-copy"><strong>{presentation.footerTitle}</strong><span>{presentation.footerDetail(revision)}</span></div>
+          <p className="approval-copy">{presentation.footerDetail(revision)}</p>
           <div className="brief-actions">
-            {presentation.editable ? <button className="button secondary" type="button" aria-expanded={editing} onClick={() => { setReviewing(false); setEditing((value) => !value); }}>{editing ? "Close editor" : "Edit plan"}</button> : null}
-            <button className={presentation.editable ? "button primary" : "button secondary"} type="button" disabled={presentation.editable && (confirmationDisabled || editing)} onClick={() => setReviewing((value) => !value)}>{reviewing ? "Close plan" : presentation.editable ? "Review call plan" : "View plan"}</button>
+            {presentation.editable ? <button className="button secondary" type="button" aria-expanded={editing} onClick={() => { setReviewing(false); setEditing((value) => !value); }}>{editing ? "Close editor" : "Edit"}</button> : null}
+            <button className={presentation.editable ? "button primary" : "button secondary"} type="button" disabled={presentation.editable && (confirmationDisabled || editing)} onClick={() => setReviewing((value) => !value)}>{reviewing ? "Close" : presentation.editable ? "Review and confirm" : "View details"}</button>
           </div>
         </div>
         {reviewing && presentation.editable ? (
@@ -249,7 +244,6 @@ export function CallBrief({
           </div>
         ) : null}
       </section>
-      <p className="webpage-only"><LockIcon />Confirmation is a webpage-only action and is not exposed through WebMCP.</p>
     </>
   );
 }

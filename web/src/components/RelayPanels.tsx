@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { AgentPlan } from "@/components/assistant-ui/elements/agent-plan";
 import { Sources } from "@/components/assistant-ui/elements/sources.aui";
 import { Timeline, type TimelineEvent } from "@/components/assistant-ui/elements/timeline";
 
@@ -28,17 +27,17 @@ export function InThreadTimeline({
   const approved = snapshot.confirmation.state === "confirmed";
   const terminal = ["completed", "partial", "failed", "stopped"].includes(snapshot.status);
   const completed = [true, hasResearch, approved, terminal].filter(Boolean).length;
-  const steps = [
-    "Understand the request",
-    "Prepare the exact call brief",
-    approved ? "Approval recorded" : "Wait for your approval",
-    "Call once and report back",
-  ];
+  const label = terminal
+    ? snapshot.status === "completed" ? "Call complete" : snapshot.status === "partial" ? "Partial result" : "Call ended"
+    : snapshot.status === "in_progress" ? "Call in progress"
+      : approved ? "Call approved"
+        : "Plan ready";
   return (
-    <section className="callbridge-agent-plan" aria-label="Task progress">
-      <AgentPlan steps={steps} activeIndex={completed} className="max-w-none" />
-      <button className="timeline-action" type="button" onClick={onOpenActivity}>View activity</button>
-    </section>
+    <button className="compact-task-progress" type="button" onClick={onOpenActivity} aria-label={`${label}. Open task activity`}>
+      <span className="compact-task-state">{terminal ? <CheckIcon /> : <span className="stream-pulse" />}</span>
+      <span className="compact-task-copy"><strong>{label}</strong><small>{completed} of 4 steps</small></span>
+      <span className="compact-task-action">View</span>
+    </button>
   );
 }
 
