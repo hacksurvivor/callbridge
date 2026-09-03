@@ -103,7 +103,7 @@ function ActivityContent({
         <small>Private background and internal reasoning are never said aloud.</small>
       </section>
 
-      <div className="context-panel-footer"><button className="stop-task-button" type="button" disabled={!terminal} title={terminal ? "This task has ended" : "No call is currently running"}><StopIcon />{terminal ? "Task ended" : "No call running"}</button></div>
+      <div className="context-panel-footer"><button className="stop-task-button" type="button" disabled title={terminal ? "This task has ended" : status === "confirmed" ? "The approved call is queued" : status === "in_progress" ? "The call is in progress" : "No call is currently running"}><StopIcon />{terminal ? "Task ended" : status === "confirmed" ? "Call queued" : status === "in_progress" ? "Call in progress" : "No call running"}</button></div>
     </>
   );
 }

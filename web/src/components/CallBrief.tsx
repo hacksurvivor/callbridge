@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent, type MouseEventHandler } from "react";
 
 import type { InquiryCallContract } from "../../../shared/inquiryContracts.js";
-import type { InquiryTaskSnapshot } from "../../../shared/inquiryState.js";
+import type { InquiryTaskSnapshot, InquiryTaskStatus } from "../../../shared/inquiryState.js";
 import { ApprovalCard, type ApprovalState } from "@/components/assistant-ui/elements/approval-card";
 import { CrossIcon, DestinationIcon, LockIcon } from "./Icons.js";
 
@@ -11,7 +11,43 @@ type CallBriefProps = {
   onConfirm?: MouseEventHandler<HTMLButtonElement>;
   onUpdate: (contract: InquiryCallContract) => Promise<void>;
   snapshot: InquiryTaskSnapshot;
+  status?: InquiryTaskStatus;
 };
+
+function planStateCopy(status: InquiryTaskStatus): {
+  kicker: string;
+  title: string;
+  footerTitle: string;
+  footerDetail: (revision: number) => string;
+  editable: boolean;
+} {
+  if (status === "confirmed" || status === "in_progress") {
+    return {
+      kicker: status === "in_progress" ? "Call in progress" : "Approval recorded",
+      title: "Approved call plan",
+      footerTitle: "Approved by you",
+      footerDetail: (revision) => `Draft v${revision} is locked to one attempt with no automatic retry.`,
+      editable: false,
+    };
+  }
+  if (["completed", "partial", "failed", "stopped"].includes(status)) {
+    const kicker = status === "completed" ? "Complete" : status === "partial" ? "Partial result" : status === "stopped" ? "Stopped" : "Call ended";
+    return {
+      kicker,
+      title: "Final call plan",
+      footerTitle: "Task ended",
+      footerDetail: (revision) => `Draft v${revision} is preserved as the read-only execution record.`,
+      editable: false,
+    };
+  }
+  return {
+    kicker: "Approval needed",
+    title: "Review the call plan",
+    footerTitle: "Only you can place this call",
+    footerDetail: (revision) => `Approval applies only to draft v${revision}. Editing the brief resets it.`,
+    editable: true,
+  };
+}
 
 function languageName(tag: string): string {
   try {
@@ -68,8 +104,10 @@ export function CallBrief({
   onConfirm,
   onUpdate,
   snapshot,
+  status = snapshot.status,
 }: CallBriefProps) {
   const { contract, revision } = snapshot;
+  const presentation = planStateCopy(status);
   const [editing, setEditing] = useState(false);
   const [reviewing, setReviewing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -124,7 +162,7 @@ export function CallBrief({
       <section className={`brief inline-call-plan ${reviewing || editing ? "is-expanded" : ""}`} aria-label="Exact call plan">
         <div className="call-plan-heading">
           <span className="plan-symbol"><LockIcon /></span>
-          <div><span>Approval needed</span><h2>Review the call plan</h2><p>{contract.questions.length} questions · {languageName(contract.languages.call)} · no booking or payment</p></div>
+          <div><span>{presentation.kicker}</span><h2>{presentation.title}</h2><p>{contract.questions.length} questions · {languageName(contract.languages.call)} · no booking or payment</p></div>
           <span className="revision-chip">Draft v{revision}</span>
         </div>
         {reviewing || editing ? (
@@ -189,13 +227,13 @@ export function CallBrief({
           </div>
         ) : null}
         <div className="brief-footer">
-          <div className="approval-copy"><strong>Only you can place this call</strong><span>Approval applies only to draft v{revision}. Editing the brief resets it.</span></div>
+          <div className="approval-copy"><strong>{presentation.footerTitle}</strong><span>{presentation.footerDetail(revision)}</span></div>
           <div className="brief-actions">
-            <button className="button secondary" type="button" aria-expanded={editing} onClick={() => { setReviewing(false); setEditing((value) => !value); }}>{editing ? "Close editor" : "Edit plan"}</button>
-            <button className="button primary" type="button" disabled={confirmationDisabled || editing} onClick={() => setReviewing((value) => !value)}>{reviewing ? "Close review" : "Review call plan"}</button>
+            {presentation.editable ? <button className="button secondary" type="button" aria-expanded={editing} onClick={() => { setReviewing(false); setEditing((value) => !value); }}>{editing ? "Close editor" : "Edit plan"}</button> : null}
+            <button className={presentation.editable ? "button primary" : "button secondary"} type="button" disabled={presentation.editable && (confirmationDisabled || editing)} onClick={() => setReviewing((value) => !value)}>{reviewing ? "Close plan" : presentation.editable ? "Review call plan" : "View plan"}</button>
           </div>
         </div>
-        {reviewing ? (
+        {reviewing && presentation.editable ? (
           <div className="callbridge-approval-wrap" role="region" aria-label="Final confirmation">
             <ApprovalCard
               state={approvalState}

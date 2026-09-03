@@ -286,6 +286,7 @@ export default function App({
                   onConfirm={onConfirm}
                   onUpdate={onUpdate}
                   snapshot={draft}
+                  status={status}
                 />
                 {transportSaveError ? <p className="confirmation-message error" role="alert">{transportSaveError}</p> : null}
                 {confirmation.state !== "idle" ? <p className={`confirmation-message ${confirmation.state}`} role="status">{confirmation.message}</p> : null}
