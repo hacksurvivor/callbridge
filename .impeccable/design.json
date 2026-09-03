@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-03T10:43:15Z",
+  "title": "Design System: CallBridge",
+  "extensions": {
+    "colorMeta": {
+      "ink": { "role": "primary", "displayName": "Conversation Ink", "canonical": "#0d0d0d", "tonalRamp": ["#111111", "#292929", "#444444", "#606060", "#838383", "#a9a9a9", "#d1d1d1", "#f3f3f3"] },
+      "paper": { "role": "neutral", "displayName": "Open Paper", "canonical": "#ffffff", "tonalRamp": ["#191919", "#363636", "#555555", "#767676", "#9b9b9b", "#c2c2c2", "#e5e5e5", "#ffffff"] },
+      "sidebar": { "role": "neutral", "displayName": "Quiet Sidebar", "canonical": "#f9f9f8", "tonalRamp": ["#181816", "#363633", "#555551", "#777771", "#9d9d96", "#c4c4bd", "#e7e7e2", "#f9f9f8"] },
+      "approval": { "role": "primary", "displayName": "Approval Red", "canonical": "#d0442f", "tonalRamp": ["#32100b", "#5a1d14", "#842b1e", "#ad3927", "#d95843", "#e98b7b", "#f5beb5", "#fceeea"] },
+      "success": { "role": "secondary", "displayName": "Verified Green", "canonical": "#1f8b4c", "tonalRamp": ["#092817", "#0e4727", "#146638", "#1c8449", "#3ca36a", "#70bf91", "#acd9bd", "#e6f3eb"] }
+    },
+    "typographyMeta": {
+      "title": { "displayName": "Compact Title", "purpose": "Plan, result, and activity titles." },
+      "body": { "displayName": "Conversation Body", "purpose": "Assistant and user conversation copy." },
+      "label": { "displayName": "Interface Label", "purpose": "Navigation, tool states, and metadata." }
+    },
+    "shadows": [
+      { "name": "floating-control", "value": "0 2px 10px rgba(0,0,0,.08)", "purpose": "Composer and small floating controls only." },
+      { "name": "popover", "value": "0 12px 32px rgba(0,0,0,.13), 0 2px 6px rgba(0,0,0,.06)", "purpose": "Temporary menus and popovers." }
+    ],
+    "motion": [
+      { "name": "overlay-slide", "value": "180ms ease", "purpose": "Mobile navigation overlay entrance and exit." },
+      { "name": "status-pulse", "value": "900ms ease-in-out infinite alternate", "purpose": "Bounded streaming and running state only." }
+    ],
+    "breakpoints": [
+      { "name": "context-overlay", "value": "1240px" },
+      { "name": "mobile-navigation", "value": "820px" },
+      { "name": "compact-phone", "value": "600px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Decisive black action used for review, save, and confirmation.",
+      "html": "<button class=\"ds-button-primary\">Review call plan</button>",
+      "css": ".ds-button-primary{height:36px;padding:0 13px;border:1px solid #0d0d0d;border-radius:8px;background:#0d0d0d;color:#fff;font:600 12px ui-sans-serif,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;cursor:pointer}.ds-button-primary:hover{background:#2f2f2f;border-color:#2f2f2f}.ds-button-primary:focus-visible{outline:2px solid #0d0d0d;outline-offset:2px}"
+    },
+    {
+      "name": "Ghost Navigation",
+      "kind": "nav",
+      "description": "Quiet sidebar or panel action with an icon and label.",
+      "html": "<button class=\"ds-nav\"><svg viewBox=\"0 0 20 20\" fill=\"none\" aria-hidden=\"true\"><circle cx=\"8.7\" cy=\"8.7\" r=\"4.8\"/><path d=\"m12.3 12.3 3.6 3.6\"/></svg><span>Search chats</span></button>",
+      "css": ".ds-nav{width:220px;height:40px;display:flex;align-items:center;gap:9px;padding:0 10px;border:0;border-radius:8px;background:transparent;color:#202020;font:400 14px ui-sans-serif,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;cursor:pointer}.ds-nav svg{width:18px;height:18px;stroke:currentColor;stroke-width:1.55}.ds-nav:hover{background:#ececec}.ds-nav:focus-visible{outline:2px solid #0d0d0d;outline-offset:2px}"
+    },
+    {
+      "name": "Search Field",
+      "kind": "input",
+      "description": "Compact white search input used inside quiet navigation.",
+      "html": "<input class=\"ds-input\" value=\"Sakura\" aria-label=\"Search chats\">",
+      "css": ".ds-input{height:38px;width:220px;padding:0 10px;border:1px solid #cfcfcb;border-radius:8px;background:#fff;color:#0d0d0d;font:400 13px ui-sans-serif,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;box-shadow:0 1px 2px rgba(0,0,0,.04)}.ds-input:focus-visible{outline:2px solid #0d0d0d;outline-offset:2px}"
+    },
+    {
+      "name": "Plan Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Compact task progress container with a thin progress rule.",
+      "html": "<section class=\"ds-plan\"><div><strong>Plan</strong><span>2 of 4 steps complete</span></div><i></i><p>● Understand the request</p><p>◉ Wait for your approval</p></section>",
+      "css": ".ds-plan{width:360px;padding:13px 14px 12px;border:1px solid #e5e5e5;border-radius:12px;background:#fff;color:#0d0d0d;font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}.ds-plan div{display:flex;gap:7px;align-items:baseline}.ds-plan strong{font-size:13px}.ds-plan span{color:#777771;font-size:11px}.ds-plan i{display:block;height:3px;margin:10px 0 12px;border-radius:99px;background:linear-gradient(90deg,#595959 50%,#eeeeec 50%)}.ds-plan p{margin:7px 0;color:#4d4d4d;font-size:12.5px}"
+    },
+    {
+      "name": "Tool Action",
+      "kind": "custom",
+      "description": "Actual tool action with a tiny favicon and completion state.",
+      "html": "<div class=\"ds-tool\"><span><svg viewBox=\"0 0 20 20\" fill=\"none\"><path d=\"M12.5 4.1a4.2 4.2 0 0 0-5.3 5.3l-3.7 3.7a2 2 0 1 0 2.8 2.8l3.7-3.7a4.2 4.2 0 0 0 5.3-5.3l-2.5 2.5-2.2-.6-.6-2.2 2.5-2.5Z\"/></svg></span><strong>Read the call draft</strong><small>✓ Done</small></div>",
+      "css": ".ds-tool{width:360px;min-height:38px;display:grid;grid-template-columns:24px 1fr auto;align-items:center;gap:9px;color:#424242;font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}.ds-tool>span{width:22px;height:22px;display:grid;place-items:center;border:1px solid #e1e1e1;border-radius:6px}.ds-tool svg{width:13px;height:13px;stroke:#4c4c4c;stroke-width:1.6}.ds-tool strong{font-size:13px;font-weight:500}.ds-tool small{color:#777771;font-size:11px}"
+    },
+    {
+      "name": "Conversation Composer",
+      "kind": "input",
+      "refersTo": "composer",
+      "description": "Bottom-anchored capsule matching the readable conversation measure.",
+      "html": "<div class=\"ds-composer\"><span>Message CallBridge</span><button aria-label=\"Send\">↑</button></div>",
+      "css": ".ds-composer{width:520px;min-height:58px;display:flex;align-items:center;justify-content:space-between;padding:9px 9px 9px 16px;border:1px solid #dedede;border-radius:28px;background:#fff;color:#777;font:400 15px ui-sans-serif,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;box-shadow:0 2px 10px rgba(0,0,0,.08)}.ds-composer button{width:38px;height:38px;border:0;border-radius:50%;background:#0d0d0d;color:#fff;font-size:18px;cursor:pointer}.ds-composer button:hover{background:#303030}.ds-composer button:focus-visible{outline:2px solid #0d0d0d;outline-offset:2px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Quiet Task Thread",
+    "overview": "CallBridge adopts the current ChatGPT web interaction language so the phone-task workflow feels native to an assistant conversation. The conversation owns the canvas; operational detail appears only as compact reasoning, tool, plan, approval, and activity elements. The system is neutral, flat, and information-led. It rejects dashboard density, oversized branding, decorative process diagrams, and clickable chrome without a real state or action.",
+    "keyCharacteristics": ["Open white conversation canvas with generous negative space.", "Warm gray navigation and soft gray user messages.", "Plain assistant text with compact reasoning and tool disclosures.", "Black primary controls; red reserved for consequential approval.", "A narrow, optional activity rail using small source favicons."],
+    "rules": [
+      { "name": "The Rare Signal Rule", "body": "Approval red and success green appear only when their state is true; neutral work stays neutral.", "section": "colors" },
+      { "name": "The Conversation Scale Rule", "body": "Product copy stays at reading size while chrome stays one step smaller; no workflow state becomes a hero heading.", "section": "typography" },
+      { "name": "The Flat-By-Default Rule", "body": "Permanent content never receives decorative elevation; shadow must explain floating behavior.", "section": "elevation" }
+    ],
+    "dos": ["Do keep assistant output as open text and user input as a soft gray bubble.", "Do render actual Assistant UI reasoning, tool, streaming, message, composer, and scroll primitives.", "Do name the real tool action and show small source favicons in dense activity lists.", "Do keep unsupported capabilities out of the interface and explain safety boundaries in plain language.", "Do use one readable conversation measure across messages, plans, artifacts, results, and the composer."],
+    "donts": ["Don't turn the conversation into an operations dashboard or a stack of decorative cards.", "Don't invent thread history, attachments, calls, tools, or evidence the runtime does not own.", "Don't use red as branding, routine progress, or decoration.", "Don't use oversized type, uppercase section furniture, gradient fills, glass effects, or glossy icon tiles.", "Don't ship clickable selectors, menus, images, or search fields without working behavior."]
+  }
+}

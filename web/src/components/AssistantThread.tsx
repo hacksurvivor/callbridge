@@ -6,7 +6,17 @@ import {
 } from "@assistant-ui/react";
 import type { ReactNode } from "react";
 
-import { ArrowUpIcon, CheckIcon, ChevronDownIcon, MicrophoneIcon, PaperclipIcon, ToolIcon } from "./Icons.js";
+import { ArrowUpIcon, CheckIcon, ChevronDownIcon, GalleryIcon, ToolIcon } from "./Icons.js";
+
+function toolLabel(toolName: string): string {
+  const labels: Record<string, string> = {
+    read_call_draft: "Read the call draft",
+    update_call_draft: "Updated the call draft",
+    prepare_confirmation: "Prepared confirmation",
+    get_inquiry_result: "Checked the call result",
+  };
+  return labels[toolName] ?? toolName.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
+}
 
 function UserMessage() {
   return (
@@ -43,13 +53,7 @@ function AssistantMessage() {
                   </details>
                 );
               case "group-tool":
-                return (
-                  <div className={`message-tool-row ${part.status.type === "running" ? "is-running" : ""}`}>
-                    <ToolIcon />
-                    <span><strong>{part.status.type === "running" ? "Using CallBridge tools" : "Checked the call draft"}</strong><small>{part.indices.length} {part.indices.length === 1 ? "tool" : "tools"}</small></span>
-                    <span className="message-tool-status">{part.status.type === "running" ? <span className="stream-pulse" /> : <CheckIcon />}{part.status.type === "running" ? "Running" : "Complete"}</span>
-                  </div>
-                );
+                return <div className="message-tool-group" aria-label={`${part.indices.length} tool ${part.indices.length === 1 ? "action" : "actions"}`}>{children}</div>;
               case "text":
                 return <p className="assistant-text">{part.text}</p>;
               case "indicator":
@@ -57,7 +61,13 @@ function AssistantMessage() {
               case "reasoning":
                 return <p>{part.text}</p>;
               case "tool-call":
-                return null;
+                return (
+                  <div className={`message-tool-row ${part.result === undefined ? "is-running" : ""}`}>
+                    <span className="tool-favicon"><ToolIcon /></span>
+                    <strong>{toolLabel(part.toolName)}</strong>
+                    <span className="message-tool-status">{part.result === undefined ? <span className="stream-pulse" /> : <CheckIcon />}{part.result === undefined ? "Running" : "Done"}</span>
+                  </div>
+                );
               default:
                 return null;
             }
@@ -68,7 +78,7 @@ function AssistantMessage() {
   );
 }
 
-export function ConversationComposer() {
+export function ConversationComposer({ onOpenGallery }: { onOpenGallery?: () => void }) {
   return (
     <div className="composer-dock">
       <ComposerPrimitive.Root className="conversation-composer">
@@ -81,12 +91,7 @@ export function ConversationComposer() {
         />
         <div className="composer-controls">
           <div className="composer-control-group">
-            <ComposerPrimitive.AddAttachment className="composer-icon-button" aria-label="Add an attachment" title="Add an attachment" disabled>
-              <PaperclipIcon />
-            </ComposerPrimitive.AddAttachment>
-            <ComposerPrimitive.Dictate className="composer-icon-button" aria-label="Dictate a message" title="Dictate a message">
-              <MicrophoneIcon />
-            </ComposerPrimitive.Dictate>
+            {onOpenGallery ? <button className="composer-icon-button" type="button" onClick={onOpenGallery} aria-label="Open task images" title="Open task images"><GalleryIcon /></button> : null}
           </div>
           <ComposerPrimitive.Send className="composer-send" aria-label="Send message">
             <ArrowUpIcon />
@@ -98,7 +103,7 @@ export function ConversationComposer() {
   );
 }
 
-export function AssistantThread({ children }: { children: ReactNode }) {
+export function AssistantThread({ children, onOpenGallery }: { children: ReactNode; onOpenGallery?: () => void }) {
   return (
     <ThreadPrimitive.Root className="assistant-thread">
       <ThreadPrimitive.Viewport
@@ -112,7 +117,8 @@ export function AssistantThread({ children }: { children: ReactNode }) {
           {children}
         </div>
         <ThreadPrimitive.ViewportFooter className="thread-footer">
-          <ConversationComposer />
+          <ThreadPrimitive.ScrollToBottom className="scroll-to-bottom" aria-label="Scroll to the latest message"><ChevronDownIcon /></ThreadPrimitive.ScrollToBottom>
+          <ConversationComposer {...(onOpenGallery ? { onOpenGallery } : {})} />
         </ThreadPrimitive.ViewportFooter>
       </ThreadPrimitive.Viewport>
     </ThreadPrimitive.Root>

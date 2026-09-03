@@ -60,6 +60,19 @@ function assistantTransportDevEndpoint(): Plugin {
 
 export default defineConfig({
   plugins: [react(), assistantTransportDevEndpoint()],
+  build: {
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            { name: "assistant-ui", test: /node_modules\/(?:@assistant-ui|assistant-stream)\// },
+            { name: "convex", test: /node_modules\/convex\// },
+            { name: "react", test: /node_modules\/(?:react|react-dom|scheduler)\// },
+          ],
+        },
+      },
+    },
+  },
   server: {
     host: "127.0.0.1",
     port: 5173,

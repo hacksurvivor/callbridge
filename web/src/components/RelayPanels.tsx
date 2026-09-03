@@ -1,7 +1,9 @@
+import { useEffect, useState } from "react";
+
 import type { InquiryActivityEvent } from "../../../shared/inquiryWebMcp.js";
 import type { InquiryTaskSnapshot, InquiryTaskStatus } from "../../../shared/inquiryState.js";
 import { activityEventCopy, fallbackActivityEvents } from "./ActivityRail.js";
-import { ActivityIcon, CheckIcon, CloseIcon, GalleryIcon, LockIcon, ShieldIcon, StopIcon, ToolIcon } from "./Icons.js";
+import { ActivityIcon, CallBridgeIcon, CheckIcon, CloseIcon, GalleryIcon, LockIcon, ShieldIcon, StopIcon, ToolIcon } from "./Icons.js";
 import type { TaskMedia } from "./RelaySidebar.js";
 
 export type ContextPanelMode = "activity" | "gallery";
@@ -22,15 +24,20 @@ export function InThreadTimeline({
   const hasResearch = events.length > 1 || snapshot.pricing.status === "ready";
   const approved = snapshot.confirmation.state === "confirmed";
   const terminal = ["completed", "partial", "failed", "stopped"].includes(snapshot.status);
+  const completed = [true, hasResearch, approved, terminal].filter(Boolean).length;
   return (
     <section className="thread-timeline" aria-label="Task progress">
+      <div className="timeline-heading">
+        <div><strong>Plan</strong><span>{completed} of 4 steps complete</span></div>
+        <button className="timeline-action" type="button" onClick={onOpenActivity}>View activity</button>
+      </div>
+      <div className="timeline-progress" aria-hidden="true"><span style={{ width: `${Math.max(8, completed * 25)}%` }} /></div>
       <ol>
-        <li className="is-complete"><span><CheckIcon /></span><strong>Request</strong></li>
-        <li className={hasResearch ? "is-complete" : "is-current"}><span>{hasResearch ? <CheckIcon /> : null}</span><strong>Prepared</strong></li>
-        <li className={approved ? "is-complete" : "is-current is-approval"}><span>{approved ? <CheckIcon /> : null}</span><strong>Approval</strong></li>
-        <li className={terminal ? "is-complete" : ""}><span>{terminal ? <CheckIcon /> : null}</span><strong>Result</strong></li>
+        <li className="is-complete"><span><CheckIcon /></span><strong>Understand the request</strong></li>
+        <li className={hasResearch ? "is-complete" : "is-current"}><span>{hasResearch ? <CheckIcon /> : null}</span><strong>Prepare the exact call brief</strong></li>
+        <li className={approved ? "is-complete" : "is-current is-approval"}><span>{approved ? <CheckIcon /> : null}</span><strong>{approved ? "Approval recorded" : "Wait for your approval"}</strong></li>
+        <li className={terminal ? "is-complete" : ""}><span>{terminal ? <CheckIcon /> : null}</span><strong>Call once and report back</strong></li>
       </ol>
-      <button className="timeline-action" type="button" onClick={onOpenActivity}><ActivityIcon />View activity</button>
     </section>
   );
 }
@@ -55,7 +62,7 @@ function ActivityContent({
             const copy = activityEventCopy(event, snapshot);
             return (
               <li key={event.eventId}>
-                <span className="activity-sheet-node"><CheckIcon /></span>
+                <span className="activity-sheet-node"><CallBridgeIcon /></span>
                 <div><strong>{copy.title}</strong><p>{copy.detail}</p><time dateTime={event.occurredAt}>{eventTime(event.occurredAt)}</time></div>
               </li>
             );
@@ -95,16 +102,39 @@ function ActivityContent({
 }
 
 function GalleryContent({ media }: { media: readonly TaskMedia[] }) {
+  const [selected, setSelected] = useState<TaskMedia | null>(null);
+  useEffect(() => {
+    if (!selected) return;
+    const close = (event: KeyboardEvent) => { if (event.key === "Escape") setSelected(null); };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [selected]);
   return (
-    <section className="context-section context-gallery">
-      <h3>Files & images</h3>
-      <p>Everything CallBridge used for this task. Open an item without leaving the conversation.</p>
-      {media.length ? (
-        <div className="gallery-grid">
-          {media.map((item) => <figure key={item.artifactId}><img src={item.src} alt={item.alt} /><figcaption>{item.caption}</figcaption></figure>)}
+    <>
+      <section className="context-section context-gallery">
+        <h3>Files & images</h3>
+        <p>Images CallBridge can display for this task.</p>
+        {media.length ? (
+          <div className="gallery-grid">
+            {media.map((item) => (
+              <button key={item.artifactId} className="gallery-item" type="button" onClick={() => setSelected(item)}>
+                <img src={item.src} alt="" />
+                <span>{item.caption}</span>
+              </button>
+            ))}
+          </div>
+        ) : <p className="gallery-empty">No display-approved pictures or evidence are attached yet.</p>}
+      </section>
+      {selected ? (
+        <div className="image-lightbox" role="dialog" aria-modal="true" aria-label={selected.caption} onClick={() => setSelected(null)}>
+          <button className="image-lightbox-close" type="button" aria-label="Close image" onClick={() => setSelected(null)}><CloseIcon /></button>
+          <figure onClick={(event) => event.stopPropagation()}>
+            <img src={selected.src} alt={selected.alt} />
+            <figcaption>{selected.caption}</figcaption>
+          </figure>
         </div>
-      ) : <p className="gallery-empty">No display-approved pictures or evidence are attached yet.</p>}
-    </section>
+      ) : null}
+    </>
   );
 }
 

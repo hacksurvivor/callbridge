@@ -1,70 +1,180 @@
-# CallBridge design system
+---
+name: CallBridge
+description: A ChatGPT-native conversation interface for bounded phone tasks.
+colors:
+  ink: "#0d0d0d"
+  paper: "#ffffff"
+  sidebar: "#f9f9f8"
+  surface-soft: "#f4f4f4"
+  surface-hover: "#ececec"
+  border: "#e5e5e5"
+  text-muted: "#5d5d5d"
+  text-quiet: "#777771"
+  approval: "#d0442f"
+  success: "#1f8b4c"
+typography:
+  title:
+    fontFamily: "ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
+    fontSize: "15px"
+    fontWeight: 600
+    lineHeight: 1.45
+    letterSpacing: "-0.01em"
+  body:
+    fontFamily: "ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
+    fontSize: "15px"
+    fontWeight: 400
+    lineHeight: 1.62
+  label:
+    fontFamily: "ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
+    fontSize: "12px"
+    fontWeight: 600
+    lineHeight: 1.35
+rounded:
+  control: "8px"
+  content: "12px"
+  message: "18px"
+  composer: "28px"
+spacing:
+  compact: "8px"
+  control: "12px"
+  content: "16px"
+  section: "24px"
+components:
+  button-primary:
+    backgroundColor: "{colors.ink}"
+    textColor: "{colors.paper}"
+    rounded: "{rounded.control}"
+    height: "36px"
+    padding: "0 13px"
+  card:
+    backgroundColor: "{colors.paper}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.content}"
+    padding: "12px 14px"
+  composer:
+    backgroundColor: "{colors.paper}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.composer}"
+    padding: "9px 9px 9px 16px"
+---
 
-## Product experience
+# Design System: CallBridge
 
-CallBridge is a conversation-first assistant for tasks that may lead to a phone call. The interface should feel immediately familiar to a ChatGPT user: natural-language input, plain assistant responses, visible but compact reasoning and tool activity, and secondary context that appears only when requested or operationally relevant.
+## Overview
 
-The product is not an operations dashboard. The conversation remains the primary surface. Users should only manage the exact facts, choices, and approvals that require them.
+**Creative North Star: "The Quiet Task Thread"**
 
-## Web direction: Chat + activity drawer
+CallBridge adopts the current ChatGPT web interaction language so the phone-task workflow feels native to an assistant conversation. The conversation owns the canvas; operational detail appears only as compact reasoning, tool, plan, approval, and activity elements.
 
-The approved web composition has three responsive regions:
+The system is neutral, flat, and information-led. It rejects dashboard density, oversized branding, decorative process diagrams, and clickable chrome without a real state or action.
 
-1. A quiet conversation sidebar for new tasks, search, task images, and thread history.
-2. A centered conversation column with a maximum readable width of 760px and a bottom-anchored composer.
-3. A contextual drawer that switches between Activity and Images. It is open for active desktop work, closed by default on mobile, and never competes with the conversation when it is unnecessary.
+**Key Characteristics:**
 
-The direction was approved in Scratchpad as `2 · Chat + activity drawer` under seed `scratchpad-chatgpt-direction-2`.
+- Open white conversation canvas with generous negative space.
+- Warm gray navigation and soft gray user messages.
+- Plain assistant text with compact reasoning and tool disclosures.
+- Black primary controls; red reserved for consequential approval.
+- A narrow, optional activity rail using small source favicons.
 
-## Visual language
+## Colors
 
-- Use white for the conversation canvas and a quiet neutral gray for navigation and secondary surfaces.
-- Use plain assistant text without an avatar, border, or message card.
-- Use a soft gray bubble for the user's message.
-- Use black for primary actions and neutral iconography.
-- Reserve red for consequential approval or confirmation states. Use neutral or amber-brown treatment for stop and error states; do not use red as general brand decoration or progress color.
-- Use blue for neutral running states and green for verified completion.
-- Use 1px neutral dividers, 12–14px content-card radii, and a 20–22px composer radius. Avoid stacked decorative cards.
-- Use the platform system sans-serif stack. Body copy is 14px on desktop and remains readable without zoom on mobile.
+The palette is nearly monochrome so state and content hierarchy remain stronger than branding.
 
-## Conversation components
+### Primary
 
-### Reasoning
+- **Approval red** marks the exact human confirmation boundary and is never used as general progress decoration.
 
-Reasoning is a concise, safe product-facing summary, never hidden chain-of-thought. It uses an expandable native disclosure row. While streaming, the row opens automatically and shows a restrained waveform; after completion it collapses and remains available.
+### Neutral
 
-### Tool use
+- **Conversation ink** carries primary copy and decisive controls.
+- **Open paper** is the main thread and panel ground.
+- **Quiet sidebar** separates navigation by tone, not a hard border.
+- **Soft surface** is reserved for user bubbles, hovers, and compact icon grounds.
+- **Neutral border** defines plan, approval, result, and media containers with one-pixel rules.
+- **Muted and quiet text** separate supporting explanations and timestamps without becoming illegible.
 
-Tool use appears as a compact inline row showing the action, tool count, and running or complete state. The Activity drawer carries the detailed tool log. Protected confirmation is explicitly described as unavailable to tools.
+**The Rare Signal Rule.** Approval red and success green appear only when their state is true; neutral work stays neutral.
 
-### Text streaming
+## Typography
 
-Assistant text streams directly into the conversation. A quiet three-dot indicator communicates activity without moving the layout or replacing existing text.
+**Display Font:** platform UI sans-serif stack
+**Body Font:** platform UI sans-serif stack
 
-### Timeline
+**Character:** Familiar, compact, and conversational. Hierarchy comes from modest changes in weight and spacing, not editorial display typography.
 
-The conversation shows four compact stages: Request, Prepared, Approval, and Result. The full factual event history belongs in the Activity drawer.
+### Hierarchy
 
-### Call plan
+- **Title** (600, 15px, 1.45): plan, result, and activity titles.
+- **Body** (400, 15px, 1.62): assistant and user conversation copy, held to a readable 68–72 character measure.
+- **Label** (600, 12px, 1.35): navigation, tool states, plan steps, and compact metadata.
 
-The call plan enters the conversation as a compact approval card. Its exact questions, context, authority, pricing, and disclosure expand only when the user selects Review. Editing creates a new revision and resets confirmation. Final confirmation remains a webpage-only action.
+**The Conversation Scale Rule.** Product copy stays at reading size while chrome stays one step smaller; no workflow state becomes a hero heading.
 
-### Images
+## Layout
 
-The sidebar exposes Files & images with an accurate count. Selecting it opens the drawer's Images tab. Only display-approved evidence is rendered; blocked or unsupported references never become broken thumbnails.
+Desktop uses three coordinated regions: a 260px sidebar, a flexible conversation canvas with a 768px maximum reading measure, and an optional 380px activity or image rail. The header is 52px tall and the capsule composer is sticky at the bottom of the thread.
 
-## Responsive behavior
+Below 1240px, the context rail overlays from the right. Below 820px, navigation becomes an off-canvas sheet and the thread takes the full width. At 390px, the content keeps 14px side margins, the user bubble may reach 90% width, and plan details collapse to one column without horizontal overflow.
 
-- At wide desktop sizes, the sidebar, conversation, and contextual drawer can coexist.
-- Below 1240px, the contextual drawer overlays from the right.
-- Below 820px, the conversation sidebar also becomes an overlay and the Activity drawer stays closed on initial load.
-- At 390px, the composer remains inside the viewport, the timeline stays legible, and the page has no horizontal overflow.
-- Motion respects `prefers-reduced-motion`.
+## Elevation & Depth
 
-## Interaction and accessibility
+The system is flat by default. Tonal differences and one-pixel borders create structure. Ambient shadow appears only on temporary floating surfaces: the composer, menus, the scroll-to-latest control, overlays, and full-size media preview.
 
-- Every control has a visible keyboard focus state and an accessible name.
-- Secondary text must meet WCAG AA contrast against its surface.
-- Disabled attachment, dictation, calling, and confirmation states remain visibly distinct and truthful.
-- The interface never implies a call was placed, an image exists, or a tool completed unless the backing state says so.
-- Error states state both the failure and the safety outcome: nothing was shared and no call was placed.
+**The Flat-By-Default Rule.** Permanent content never receives decorative elevation; shadow must explain floating behavior.
+
+## Shapes
+
+Controls use gently curved 8px corners, content containers use 12px corners, user messages use 18px corners, and the composer uses a full 28px capsule. Small source icons use 6px squares; status progress uses true circles. Pills are not used for general metadata.
+
+## Components
+
+### Buttons
+
+- **Shape:** gently curved control corners (8px) or true circles for icon-only actions.
+- **Primary:** black ground, white label, 36px minimum height.
+- **Hover / Focus:** tonal hover and a two-pixel black focus outline with offset.
+- **Secondary / Ghost:** white bordered controls for explicit alternatives; borderless controls for navigation and panel switching.
+
+### Cards / Containers
+
+- **Corner Style:** compact 12px corners.
+- **Background:** white on the conversation canvas.
+- **Shadow Strategy:** none at rest.
+- **Border:** one-pixel neutral gray.
+- **Internal Padding:** 12–16px depending on density.
+
+### Inputs / Fields
+
+- **Style:** white field, neutral one-pixel border, 8px corners; the main composer uses the 28px capsule.
+- **Focus:** two-pixel black outline with offset.
+- **Disabled:** unavailable runtime capabilities are omitted instead of shown as inert controls.
+
+### Navigation
+
+Sidebar and top-bar navigation use 13–14px labels, 18px stroke icons, 8px hover grounds, and one subtle selected row. Mobile navigation and context become dismissible overlay sheets.
+
+### Reasoning, tools, and plan
+
+Reasoning is a plain disclosure row with a safe product-facing summary. Tool actions use a 22px favicon, the real tool action, and a running or done state. The plan uses four short steps and a three-pixel progress rule; factual event detail lives in the Activity rail.
+
+### Approval
+
+The approval card is the only place where red is structural. Review and editing expand the same card; final confirmation remains a distinct webpage-only action tied to one revision.
+
+## Do's and Don'ts
+
+### Do:
+
+- **Do** keep assistant output as open text and user input as a soft gray bubble.
+- **Do** render actual Assistant UI reasoning, tool, streaming, message, composer, and scroll primitives.
+- **Do** name the real tool action and show small source favicons in dense activity lists.
+- **Do** keep unsupported capabilities out of the interface and explain safety boundaries in plain language.
+- **Do** use one readable conversation measure across messages, plans, artifacts, results, and the composer.
+
+### Don't:
+
+- **Don't** turn the conversation into an operations dashboard or a stack of decorative cards.
+- **Don't** invent thread history, attachments, calls, tools, or evidence the runtime does not own.
+- **Don't** use red as branding, routine progress, or decoration.
+- **Don't** use oversized type, uppercase section furniture, gradient fills, glass effects, or glossy icon tiles.
+- **Don't** ship clickable selectors, menus, images, or search fields without working behavior.

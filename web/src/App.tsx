@@ -247,7 +247,7 @@ export default function App({
         {simulation ? <div className="simulation-banner">Simulation · no phone call can be placed</div> : null}
         <div className={`relay-workspace ${contextPanel ? "has-context-panel" : ""}`}>
           {navigationOpen ? <button className="navigation-scrim mobile-only" aria-label="Close conversations" onClick={() => setNavigationOpen(false)} type="button" /> : null}
-          <RelaySidebar media={media} mobileOpen={navigationOpen} onClose={() => setNavigationOpen(false)} onOpenGallery={() => setContextPanel("gallery")} />
+          <RelaySidebar currentTitle={`${category} for ${destination}`} media={media} mobileOpen={navigationOpen} onClose={() => setNavigationOpen(false)} onOpenGallery={() => setContextPanel("gallery")} />
           <section className="chat-surface">
             <Header
               title={`${category} for ${destination}`}
@@ -257,7 +257,7 @@ export default function App({
               onOpenNavigation={() => setNavigationOpen(true)}
             />
             <main className="conversation-main">
-              <AssistantThread>
+              <AssistantThread onOpenGallery={() => setContextPanel("gallery")}>
                 <InThreadTimeline events={activity} snapshot={draft} onOpenActivity={() => setContextPanel("activity")} />
                 <ArtifactRegistry artifacts={artifacts} {...(onArtifactAnswer ? { onAnswer: onArtifactAnswer } : {})} {...(onArtifactAuthorize ? { onAuthorize: onArtifactAuthorize } : {})} />
                 <CallBrief confirmationDisabled={confirmationDisabled} onConfirm={onConfirm} onUpdate={onUpdate} snapshot={draft} />
