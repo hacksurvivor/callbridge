@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Sources } from "@/components/assistant-ui/elements/sources.aui";
 import { Timeline, type TimelineEvent } from "@/components/assistant-ui/elements/timeline";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 import type { InquiryActivityEvent } from "../../../shared/inquiryWebMcp.js";
 import type { InquiryTaskSnapshot, InquiryTaskStatus } from "../../../shared/inquiryState.js";
@@ -115,38 +117,38 @@ function ActivityContent({
 
 function GalleryContent({ media }: { media: readonly TaskMedia[] }) {
   const [selected, setSelected] = useState<TaskMedia | null>(null);
-  useEffect(() => {
-    if (!selected) return;
-    const close = (event: KeyboardEvent) => { if (event.key === "Escape") setSelected(null); };
-    window.addEventListener("keydown", close);
-    return () => window.removeEventListener("keydown", close);
-  }, [selected]);
   return (
-    <>
+    <Dialog open={Boolean(selected)} onOpenChange={(open) => { if (!open) setSelected(null); }}>
       <section className="context-section context-gallery">
         <h3>Files & images</h3>
         <p>Images CallBridge can display for this task.</p>
         {media.length ? (
           <div className="gallery-grid">
             {media.map((item) => (
-              <button key={item.artifactId} className="gallery-item" type="button" onClick={() => setSelected(item)}>
-                <img src={item.src} alt="" />
-                <span>{item.caption}</span>
-              </button>
+              <DialogTrigger asChild key={item.artifactId}>
+                <button className="gallery-item" type="button" onClick={() => setSelected(item)}>
+                  <img src={item.src} alt="" />
+                  <span>{item.caption}</span>
+                </button>
+              </DialogTrigger>
             ))}
           </div>
         ) : <p className="gallery-empty">No display-approved pictures or evidence are attached yet.</p>}
       </section>
       {selected ? (
-        <div className="image-lightbox" role="dialog" aria-modal="true" aria-label={selected.caption} onClick={() => setSelected(null)}>
-          <button className="image-lightbox-close" type="button" aria-label="Close image" onClick={() => setSelected(null)}><CloseIcon /></button>
-          <figure onClick={(event) => event.stopPropagation()}>
+        <DialogContent className="image-lightbox-content" overlayClassName="image-lightbox-overlay" showCloseButton={false}>
+          <DialogTitle className="sr-only">{selected.caption}</DialogTitle>
+          <DialogDescription className="sr-only">Full-size task image preview</DialogDescription>
+          <DialogClose asChild>
+            <button className="image-lightbox-close" type="button" aria-label="Close image"><CloseIcon /></button>
+          </DialogClose>
+          <figure>
             <img src={selected.src} alt={selected.alt} />
             <figcaption>{selected.caption}</figcaption>
           </figure>
-        </div>
+        </DialogContent>
       ) : null}
-    </>
+    </Dialog>
   );
 }
 
@@ -169,18 +171,30 @@ export function ContextPanel({
   snapshot: InquiryTaskSnapshot;
   status: InquiryTaskStatus;
 }) {
+  const compact = useMediaQuery("(max-width: 1240px)");
   if (!open) return null;
-  return (
-    <>
-      <button className="context-scrim mobile-only" aria-label="Close context panel" onClick={onClose} type="button" />
-      <aside className="context-panel" aria-label="Task context">
+  const panel = (
+    <aside className="context-panel" aria-label="Task context">
         <div className="context-tabs">
           <button className={mode === "activity" ? "is-active" : ""} type="button" onClick={() => onChangeMode("activity")}><ActivityIcon />Activity</button>
           <button className={mode === "gallery" ? "is-active" : ""} type="button" onClick={() => onChangeMode("gallery")}><GalleryIcon />Images{media.length ? <small>{media.length}</small> : null}</button>
           <button className="icon-button context-close" type="button" onClick={onClose} aria-label="Close context panel"><CloseIcon /></button>
         </div>
         <div className="context-scroll">{mode === "activity" ? <ActivityContent events={events} snapshot={snapshot} status={status} /> : <GalleryContent media={media} />}</div>
-      </aside>
-    </>
+    </aside>
+  );
+  if (!compact) return panel;
+  return (
+    <Dialog open onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
+      <DialogContent
+        aria-describedby={undefined}
+        className="context-panel-dialog"
+        overlayClassName="sheet-overlay"
+        showCloseButton={false}
+      >
+        <DialogTitle className="sr-only">Task context</DialogTitle>
+        {panel}
+      </DialogContent>
+    </Dialog>
   );
 }

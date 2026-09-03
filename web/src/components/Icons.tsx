@@ -78,6 +78,10 @@ export function MoreIcon(props: IconProps) {
   return <Icon {...props}><circle cx="5" cy="10" r=".8" fill="currentColor" stroke="none" /><circle cx="10" cy="10" r=".8" fill="currentColor" stroke="none" /><circle cx="15" cy="10" r=".8" fill="currentColor" stroke="none" /></Icon>;
 }
 
+export function ThemeIcon(props: IconProps) {
+  return <Icon {...props}><path d="M14.7 12.9A6.2 6.2 0 0 1 7.1 5.3a6.3 6.3 0 1 0 7.6 7.6Z" /></Icon>;
+}
+
 export function CloseIcon(props: IconProps) {
   return <Icon {...props}><path d="m5 5 10 10M15 5 5 15" /></Icon>;
 }

@@ -5,7 +5,7 @@ import { PencilIcon, Trash2Icon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { field, mono } from "./surfaces";
 
-export interface ThreadItem { title: string; time: string; unread?: boolean; }
+export interface ThreadItem { id?: string; title: string; time: string; unread?: boolean; }
 
 export function ThreadList({
   threads,
@@ -26,7 +26,7 @@ export function ThreadList({
       {threads.map((thread, i) => {
         const active = i === activeIndex;
         return (
-          <button key={thread.title} type="button" aria-current={active || undefined} onClick={() => onActiveIndexChange?.(i)} className={cn("group flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-start text-[13.5px] transition-colors", active ? field : "hover:bg-foreground/[0.03]")}>
+          <button key={thread.id ?? thread.title} type="button" aria-current={active || undefined} onClick={() => onActiveIndexChange?.(i)} className={cn("group flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-start text-[13.5px] transition-colors", active ? field : "hover:bg-foreground/[0.03]")}>
             <span className="flex-1 truncate">{thread.title}</span>
             <span className={cn(mono, "text-foreground/35 flex items-center gap-1.5 tabular-nums", showActions && "group-hover:hidden")}>{thread.unread && !active && <><span aria-hidden className="size-1.5 rounded-full bg-blue-500 dark:bg-blue-400" /><span className="sr-only">unread</span></>}{thread.time}</span>
             {showActions && <span className="hidden items-center gap-0.5 group-hover:flex"><span className="text-foreground/45 hover:bg-foreground/[0.06] hover:text-foreground/90 rounded-full p-1"><PencilIcon className="size-3" /></span><span className="text-foreground/45 hover:bg-foreground/[0.06] hover:text-foreground/90 rounded-full p-1"><Trash2Icon className="size-3" /></span></span>}

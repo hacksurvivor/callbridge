@@ -417,6 +417,20 @@ export const readDraft = query({
   },
 });
 
+export const listMine = query({
+  args: {},
+  returns: v.array(taskSnapshotValidator),
+  handler: async (ctx) => {
+    const ownerId = await requireOwnerId(ctx);
+    const tasks = await ctx.db
+      .query("inquiryTasks")
+      .withIndex("by_owner", (q) => q.eq("ownerId", ownerId))
+      .order("desc")
+      .take(50);
+    return tasks.map(taskSnapshot);
+  },
+});
+
 export const updateDraft = mutation({
   args: {
     taskId: v.id("inquiryTasks"),

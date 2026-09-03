@@ -66,6 +66,7 @@ type AttachControlledFixtureEvidenceArgs = { taskId: string; idempotencyKey: str
 const createDraftRef = makeFunctionReference<"mutation", CreateDraftArgs, InquiryTaskSnapshot>("inquiries:createDraft");
 const updateDraftRef = makeFunctionReference<"mutation", UpdateDraftArgs, UpdateInquiryDraftOutput>("inquiries:updateDraft");
 const readDraftRef = makeFunctionReference<"query", ReadDraftArgs, InquiryTaskSnapshot>("inquiries:readDraft");
+const listDraftsRef = makeFunctionReference<"query", Record<string, never>, InquiryTaskSnapshot[]>("inquiries:listMine");
 const createConfirmationIntentRef = makeFunctionReference<"mutation", CreateConfirmationIntentArgs, CreateConfirmationIntentOutput>("inquiries:createConfirmationIntent");
 const quoteCallRef = makeFunctionReference<"action", QuoteCallArgs, InquiryPricingQuote>("inquiryPricing:quoteCall");
 const confirmAndQueueRef = makeFunctionReference<"mutation", ConfirmAndQueueArgs, ConfirmAndQueueOutput>("inquiries:confirmAndQueue");
@@ -172,6 +173,10 @@ export function createConvexInquiryClient(input: {
       return result;
     },
   };
+}
+
+export async function listInquiryTasks(convex: ConvexReactClient): Promise<InquiryTaskSnapshot[]> {
+  return convex.query(listDraftsRef, {});
 }
 
 export async function submitArtifactQuestionResponse(input: {

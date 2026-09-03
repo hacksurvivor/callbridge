@@ -14,6 +14,7 @@ import schema from "./schema.js";
 const modules = import.meta.glob("./**/*.{ts,js}");
 const createDraft = makeFunctionReference<"mutation">("inquiries:createDraft");
 const readDraft = makeFunctionReference<"query">("inquiries:readDraft");
+const listMine = makeFunctionReference<"query">("inquiries:listMine");
 const updateDraft = makeFunctionReference<"mutation">("inquiries:updateDraft");
 const createConfirmationIntent = makeFunctionReference<"mutation">("inquiries:createConfirmationIntent");
 const beginPricingQuote = makeFunctionReference<"mutation">("inquiryPricing:beginPricingQuote");
@@ -252,6 +253,8 @@ describe("general inquiry Convex state", () => {
     await expect(otherUser.query(readDraft, { taskId: created.taskId })).rejects.toMatchObject({
       data: { code: "FORBIDDEN" },
     });
+    expect((await owner.query(listMine, {})).map((task: { taskId: string }) => task.taskId)).toEqual([created.taskId]);
+    expect(await otherUser.query(listMine, {})).toEqual([]);
   });
 
   it("keeps create idempotent and revokes confirmation after any material edit", async () => {

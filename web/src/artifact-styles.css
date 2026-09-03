@@ -6,33 +6,33 @@
 .artifact-workspace-heading h2 { margin: 0; font-size: 13px; }
 .artifact-workspace-heading small { color: var(--quiet); font-size: 9px; }
 .artifact-list { display: grid; gap: 8px; }
-.artifact-card { overflow: hidden; border: 1px solid var(--line-strong); border-radius: 12px; background: #fff; }
-.artifact-card.artifact-resolved, .artifact-card.artifact-superseded { border-color: var(--line); background: #fbfbfa; }
+.artifact-card { overflow: hidden; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--surface-elevated); }
+.artifact-card.artifact-resolved, .artifact-card.artifact-superseded { border-color: var(--line); background: var(--surface-subtle); }
 .artifact-card.artifact-superseded { opacity: .68; }
 .artifact-meta { padding: 7px 13px; border-bottom: 1px solid var(--line); background: var(--soft); font-size: 8.5px; }
 .artifact-heading { align-items: flex-start; padding: 13px 14px 6px; }
 .artifact-heading h2 { margin: 3px 0 0; color: var(--ink); font-size: 13px; line-height: 1.4; }
 .artifact-status { flex: 0 0 auto; padding: 4px 6px; border-radius: 6px; background: var(--soft); color: var(--muted); font-size: 9px; text-transform: capitalize; }
-.artifact-copy { margin: 6px 14px 0; color: #454541; font-size: 11px; line-height: 1.55; }
+.artifact-copy { margin: 6px 14px 0; color: var(--text-secondary); font-size: 11px; line-height: 1.55; }
 .artifact-security-note { margin: 11px 14px 14px; line-height: 1.5; letter-spacing: 0; text-transform: none; }
 .artifact-action { margin: 0 14px 14px; }
 .conversation-messages { display: grid; gap: 8px; padding: 7px 14px 14px; }
 .conversation-message { max-width: 88%; padding: 9px 10px; border-radius: 10px; background: var(--soft); }
-.conversation-message.message-agent { justify-self: end; background: #eef4ff; }
+.conversation-message.message-agent { justify-self: end; background: var(--surface-blue); }
 .conversation-message strong { font-size: 10px; }
 .conversation-message span { color: var(--quiet); font-size: 8px; text-transform: uppercase; }
-.conversation-message p, .artifact-empty { margin: 5px 0 0; color: #343431; font-size: 11px; line-height: 1.5; }
+.conversation-message p, .artifact-empty { margin: 5px 0 0; color: var(--text-secondary); font-size: 11px; line-height: 1.5; }
 .artifact-empty { color: var(--muted); }
 .question-form { display: grid; gap: 10px; padding: 7px 14px 14px; }
-.question-form > input { width: 100%; padding: 10px 11px; border: 1px solid var(--line-strong); border-radius: 8px; background: #fff; color: var(--ink); font-size: 11px; outline: none; }
+.question-form > input { width: 100%; padding: 10px 11px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface-elevated); color: var(--ink); font-size: 11px; }
 .question-options { display: grid; gap: 6px; }
-.question-options label { display: flex; align-items: center; gap: 8px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: #343431; font-size: 11px; cursor: pointer; }
+.question-options label { display: flex; align-items: center; gap: 8px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-elevated); color: var(--text-secondary); font-size: 11px; cursor: pointer; }
 .question-options input { accent-color: var(--blue); }
 .question-form .artifact-action { justify-self: start; margin: 0; }
 .artifact-response { align-items: flex-start; margin: 7px 14px 14px; padding: 10px; border-radius: 8px; background: var(--soft); }
-.artifact-response strong { color: #343431; font-size: 11px; text-align: right; }
+.artifact-response strong { color: var(--text-secondary); font-size: 11px; text-align: right; }
 .evidence-preview { display: block; width: calc(100% - 28px); max-height: 330px; margin: 7px 14px 0; border-radius: 9px; background: var(--soft); object-fit: contain; }
-.artifact-unsupported { display: grid; gap: 4px; margin: 7px 14px 14px; padding: 11px; border-radius: 8px; background: #fff7ea; color: #68491f; font-size: 10px; }
+.artifact-unsupported { display: grid; gap: 4px; margin: 7px 14px 14px; padding: 11px; border-radius: 8px; background: var(--surface-warning); color: var(--text-secondary); font-size: 10px; }
 
 @media (max-width: 600px) {
   .artifact-heading { display: grid; }

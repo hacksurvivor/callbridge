@@ -9,9 +9,11 @@ import type { InquiryTaskSnapshot, InquiryTaskStatus } from "../../shared/inquir
 import App, { type ConfirmationUiState } from "./App.js";
 import { currentAuthReturnPath, validatedAuthReturnPath } from "./authReturn.js";
 import { Header } from "./components/Header.js";
+import type { RecentTask } from "./components/RelaySidebar.js";
 import {
   confirmInquiryTask,
   createConvexInquiryClient,
+  listInquiryTasks,
   prepareInquiryConfirmation,
   readTaskIdFromLocation,
   type PreparedConfirmationIntent,
@@ -30,6 +32,19 @@ type Configuration = {
   workosClientId: string;
   redirectUri: string;
 };
+
+function recentTask(snapshot: InquiryTaskSnapshot): RecentTask {
+  const updated = new Date(snapshot.updatedAt);
+  const today = new Date();
+  const sameDay = updated.toDateString() === today.toDateString();
+  return {
+    taskId: snapshot.taskId,
+    title: `${snapshot.contract.destination.displayName} · ${snapshot.contract.objective}`,
+    time: sameDay
+      ? updated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      : updated.toLocaleDateString([], { month: "short", day: "numeric" }),
+  };
+}
 
 function readConfiguration(): Configuration | null {
   const convexUrl = import.meta.env.VITE_CONVEX_URL?.trim();
@@ -82,14 +97,29 @@ export function LiveWorkspace() {
   });
   const [confirmation, setConfirmation] = useState<ConfirmationUiState>({ state: "idle" });
   const [preparedIntent, setPreparedIntent] = useState<PreparedConfirmationIntent | null>(null);
+  const [recentTasks, setRecentTasks] = useState<RecentTask[]>([]);
 
   const acceptDraft = useCallback((next: InquiryTaskSnapshot) => {
     setDraft(next);
     setLiveStatus(next.status);
     setPreparedIntent(null);
     setConfirmation({ state: "idle" });
+    setRecentTasks((current) => [
+      recentTask(next),
+      ...current.filter(({ taskId }) => taskId !== next.taskId),
+    ]);
   }, []);
   const toolClient = useMemo(() => createConvexInquiryClient({ convex, onDraft: acceptDraft }), [acceptDraft, convex]);
+
+  useEffect(() => {
+    let active = true;
+    void listInquiryTasks(convex).then((tasks) => {
+      if (active) setRecentTasks(tasks.map(recentTask));
+    }, () => {
+      // The active task remains usable when history cannot be refreshed.
+    });
+    return () => { active = false; };
+  }, [convex]);
 
   useEffect(() => {
     const taskId = readTaskIdFromLocation();
@@ -250,6 +280,35 @@ export function LiveWorkspace() {
     }
   }, [draft, toolClient]);
 
+  const createTask = useCallback(async (objective: string) => {
+    if (!draft) throw new Error("A source task is required");
+    await toolClient.createCallDraft({
+      schemaVersion: INQUIRY_CONTRACT_SCHEMA_VERSION,
+      idempotencyKey: `web-new-task-${crypto.randomUUID()}`,
+      contract: {
+        ...draft.contract,
+        objective,
+        questions: [{ id: "primary-request", prompt: objective, required: true }],
+        context: {
+          privateBackground: "Created by the user from the CallBridge task composer.",
+          shareableFacts: [],
+        },
+        playbook: undefined,
+      },
+    }, new AbortController().signal);
+  }, [draft, toolClient]);
+
+  const selectTask = useCallback(async (taskId: string) => {
+    if (draft?.taskId === taskId) return;
+    setActivity([]);
+    setResult({ status: "not_ready" });
+    setRefreshHealth({ state: "current", lastUpdatedAt: null });
+    await toolClient.readCallDraft(
+      { schemaVersion: INQUIRY_CONTRACT_SCHEMA_VERSION, taskId },
+      new AbortController().signal,
+    );
+  }, [draft?.taskId, toolClient]);
+
   if (draft) {
     return (
       <App
@@ -258,7 +317,10 @@ export function LiveWorkspace() {
         confirmationReady={Boolean(preparedIntent)}
         draft={draft}
         onConfirm={confirm}
+        onCreateTask={createTask}
+        onSelectTask={selectTask}
         onUpdate={update}
+        recentTasks={recentTasks}
         refreshHealth={refreshHealth}
         result={result}
         status={liveStatus ?? draft.status}

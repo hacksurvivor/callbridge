@@ -19,27 +19,31 @@ export function ResultSummary({
   return (
     <section className="result-summary" aria-labelledby="result-title">
       <div className="result-heading">
+        <span className="result-mark" aria-hidden="true">C</span>
         <div><span>Call result</span><h2 id="result-title">{result.summary ?? "The call ended without a complete answer."}</h2></div>
-        <span className={`result-outcome ${result.outcome}`}>{result.outcome.replace("_", " ")}</span>
+        <span className={`result-outcome ${result.outcome}`}><span aria-hidden="true">✓</span>{result.outcome.replace("_", " ")}</span>
       </div>
       <dl className="result-facts">
         {result.answers.map((answer) => (
           <div key={answer.questionId}>
             <dt>{questions.find(({ id }) => id === answer.questionId)?.prompt ?? answer.questionId.replaceAll("-", " ")}</dt>
             <dd>{answer.value ?? (answer.status === "ambiguous" ? "Ambiguous answer" : "Not answered")}</dd>
-            {answer.evidence ? <small><span>What was heard</span> “{answer.evidence.sourceExcerpt}”</small> : null}
+            {answer.evidence ? <details className="result-evidence"><summary>What was heard</summary><p>“{answer.evidence.sourceExcerpt}”</p></details> : null}
           </div>
         ))}
       </dl>
-      <div className="result-meta">
-        <span>{result.durationSeconds}s connected</span>
-        <span>{receipt.cost.status === "provider_reported" && receipt.cost.actualMinorUnits !== null
-          ? `${formatMinorUnits(receipt.cost.actualMinorUnits, receipt.cost.currency)} provider-reported cost`
-          : "Provider cost pending"}</span>
-        <span>Disclosure {result.disclosureStatus.replace("_", " ")}</span>
-        <span>{result.commitmentSafety === "none_observed" ? "No commitment detected" : "Possible authority issue"}</span>
-        <span>{result.terminalReason.replaceAll("_", " ")}</span>
-      </div>
+      <details className="result-receipt">
+        <summary>Call receipt and safety details</summary>
+        <div className="result-meta">
+          <span>{result.durationSeconds}s connected</span>
+          <span>{receipt.cost.status === "provider_reported" && receipt.cost.actualMinorUnits !== null
+            ? `${formatMinorUnits(receipt.cost.actualMinorUnits, receipt.cost.currency)} provider-reported cost`
+            : "Provider cost pending"}</span>
+          <span>Disclosure {result.disclosureStatus.replace("_", " ")}</span>
+          <span>{result.commitmentSafety === "none_observed" ? "No commitment detected" : "Possible authority issue"}</span>
+          <span>{result.terminalReason.replaceAll("_", " ")}</span>
+        </div>
+      </details>
     </section>
   );
 }

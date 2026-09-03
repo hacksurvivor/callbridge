@@ -146,12 +146,39 @@ let events: InquiryActivityEvent[] = [
   },
 ];
 
+type SimulationTaskRecord = {
+  snapshot: InquiryTaskSnapshot;
+  events: InquiryActivityEvent[];
+  result: GetInquiryResultOutput;
+  artifacts: TaskArtifact[];
+};
+
+const taskRecords = new Map<string, SimulationTaskRecord>();
+let historyCache: InquiryTaskSnapshot[] = [currentDraft];
+
 const listeners = new Set<() => void>();
 const creations = new Map<string, InquiryTaskSnapshot>();
 
+function saveCurrentRecord(): void {
+  taskRecords.set(currentDraft.taskId, {
+    snapshot: currentDraft,
+    events: [...events],
+    result: currentResult,
+    artifacts: [...artifacts],
+  });
+  historyCache = [...taskRecords.values()]
+    .map(({ snapshot }) => snapshot)
+    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+}
+
+function notify(): void {
+  for (const listener of listeners) listener();
+}
+
 function publish(next: InquiryTaskSnapshot): void {
   currentDraft = next;
-  for (const listener of listeners) listener();
+  saveCurrentRecord();
+  notify();
 }
 
 function assertTask(taskId: string): void {
@@ -179,9 +206,27 @@ export function getInquirySimulationArtifacts(): TaskArtifact[] {
   return artifacts;
 }
 
+export function getInquirySimulationHistory(): InquiryTaskSnapshot[] {
+  return historyCache;
+}
+
+export function selectInquirySimulationTask(taskId: string): void {
+  if (taskId === currentDraft.taskId) return;
+  saveCurrentRecord();
+  const record = taskRecords.get(taskId);
+  if (!record) return;
+  currentDraft = record.snapshot;
+  events = [...record.events];
+  currentResult = record.result;
+  artifacts = [...record.artifacts];
+  saveCurrentRecord();
+  notify();
+}
+
 function publishArtifacts(next: TaskArtifact[]): void {
   artifacts = next;
-  for (const listener of listeners) listener();
+  saveCurrentRecord();
+  notify();
 }
 
 function makeArtifact(payload: ArtifactPayload, source: TaskArtifact["source"] = "callbridge_server"): TaskArtifact {
@@ -509,7 +554,11 @@ export const simulationInquiryClient: InquiryToolClient = {
     if (input.schemaVersion !== 1 || input.idempotencyKey.trim().length < 8) throw { code: "INVALID_INPUT" };
     const contract = parseInquiryCallContract(input.contract);
     const existing = creations.get(input.idempotencyKey);
-    if (existing) return existing;
+    if (existing) {
+      selectInquirySimulationTask(existing.taskId);
+      return existing;
+    }
+    saveCurrentRecord();
     const executionRevision = await computeInquiryExecutionRevision(contract);
     const created: InquiryTaskSnapshot = {
       ...makeSnapshot(contract, 1, executionRevision),
@@ -524,6 +573,8 @@ export const simulationInquiryClient: InquiryToolClient = {
       pricing: { status: "not_ready" },
     };
     creations.set(input.idempotencyKey, created);
+    currentResult = { status: "not_ready" };
+    artifacts = [];
     events = [{
       eventId: "simulation:draft-created",
       sequence: 1,

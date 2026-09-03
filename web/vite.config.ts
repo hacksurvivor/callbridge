@@ -72,7 +72,11 @@ export default defineConfig({
       output: {
         codeSplitting: {
           groups: [
-            { name: "assistant-ui", test: /node_modules\/(?:@assistant-ui|assistant-stream)\// },
+            { name: "assistant-stream", test: /node_modules\/assistant-stream\// },
+            { name: "assistant-ui-markdown", test: /node_modules\/@assistant-ui\/react-markdown\// },
+            { name: "assistant-ui", test: /node_modules\/@assistant-ui\// },
+            { name: "markdown", test: /node_modules\/(?:react-markdown|remark-|rehype-|unified|micromark|mdast-|hast-)\// },
+            { name: "radix", test: /node_modules\/(?:radix-ui|@radix-ui)\// },
             { name: "convex", test: /node_modules\/convex\// },
             { name: "react", test: /node_modules\/(?:react|react-dom|scheduler)\// },
           ],

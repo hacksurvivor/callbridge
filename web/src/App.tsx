@@ -9,7 +9,7 @@ import {
   type AssistantTransportConnectionMetadata,
   type ThreadMessageLike,
 } from "@assistant-ui/react";
-import { useCallback, useMemo, useRef, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 import type { InquiryCallContract } from "../../shared/inquiryContracts.js";
@@ -26,8 +26,9 @@ import { AssistantThread } from "./components/AssistantThread.js";
 import { CallBrief } from "./components/CallBrief.js";
 import { Header } from "./components/Header.js";
 import { ContextPanel, InThreadTimeline, type ContextPanelMode } from "./components/RelayPanels.js";
-import { RelaySidebar, taskMediaFromArtifacts } from "./components/RelaySidebar.js";
+import { RelaySidebar, taskMediaFromArtifacts, type RecentTask } from "./components/RelaySidebar.js";
 import { ResultSummary } from "./components/ResultSummary.js";
+import { TaskStart } from "./components/TaskStart.js";
 
 export type ConfirmationUiState =
   | { state: "idle" }
@@ -42,9 +43,12 @@ export type AppProps = {
   confirmationReady?: boolean;
   draft: InquiryTaskSnapshot;
   onConfirm: (event: MouseEvent<HTMLButtonElement>) => void;
+  onCreateTask: (objective: string) => Promise<void>;
   onArtifactAuthorize?: (artifact: TaskArtifact<AuthRequiredArtifactPayload>) => Promise<void> | void;
   onArtifactAnswer?: (artifact: TaskArtifact<UserQuestionArtifactPayload>, value: string | string[]) => Promise<void> | void;
+  onSelectTask: (taskId: string) => Promise<void> | void;
   onUpdate: (contract: InquiryCallContract) => Promise<void>;
+  recentTasks: readonly RecentTask[];
   refreshHealth?: { state: "current" | "degraded"; lastUpdatedAt: string | null };
   result?: GetInquiryResultOutput;
   simulation?: boolean;
@@ -113,11 +117,12 @@ function transportConverter(
 
 export default function App({
   activity = [], artifacts = [], confirmation, confirmationReady = true, draft, onConfirm,
-  onArtifactAuthorize, onArtifactAnswer, onUpdate,
+  onArtifactAuthorize, onArtifactAnswer, onCreateTask, onSelectTask, onUpdate, recentTasks,
   refreshHealth = { state: "current", lastUpdatedAt: null }, result = { status: "not_ready" },
   simulation = false, status = draft.status,
 }: AppProps) {
   const [contextPanel, setContextPanel] = useState<ContextPanelMode | null>(null);
+  const [homeMode, setHomeMode] = useState(false);
   const [navigationOpen, setNavigationOpen] = useState(false);
   const [transportSaveError, setTransportSaveError] = useState<string | null>(null);
   const pendingRevisionNotesRef = useRef<string[]>([]);
@@ -131,6 +136,27 @@ export default function App({
   const isStreaming = confirmation.state === "pending" || result.status === "processing";
   const confirmationDisabled = !confirmationReady || confirmation.state === "pending" || confirmation.state === "confirmed"
     || status !== "draft" && status !== "awaiting_confirmation";
+
+  const closeNavigation = useCallback(() => {
+    setNavigationOpen(false);
+    window.requestAnimationFrame(() => {
+      document.querySelector<HTMLElement>('button[aria-label="Open conversations"]')?.focus();
+    });
+  }, []);
+
+  const closeContextPanel = useCallback(() => {
+    const returnSelector = contextPanel === "activity"
+      ? 'button[aria-label="Open activity"]'
+      : 'button[aria-label="More options"]';
+    setContextPanel(null);
+    window.requestAnimationFrame(() => {
+      document.querySelector<HTMLElement>(returnSelector)?.focus();
+    });
+  }, [contextPanel]);
+
+  useEffect(() => {
+    setHomeMode(false);
+  }, [draft.taskId]);
 
   const initialTransportState = useMemo<CallBridgeTransportState>(() => ({
     messages: [{
@@ -248,8 +274,20 @@ export default function App({
       <div className="app-shell chatgpt-app">
         {simulation ? <div className="simulation-banner">Simulation · no phone call can be placed</div> : null}
         <div className={`relay-workspace ${contextPanel ? "has-context-panel" : ""}`}>
-          {navigationOpen ? <button className="navigation-scrim mobile-only" aria-label="Close conversations" onClick={() => setNavigationOpen(false)} type="button" /> : null}
-          <RelaySidebar currentTitle={`${category} for ${destination}`} media={media} mobileOpen={navigationOpen} onClose={() => setNavigationOpen(false)} onOpenGallery={() => setContextPanel("gallery")} />
+          <RelaySidebar
+            currentTaskId={draft.taskId}
+            media={media}
+            mobileOpen={navigationOpen}
+            onClose={closeNavigation}
+            onNewTask={() => { setHomeMode(true); setContextPanel(null); }}
+            onOpenGallery={() => setContextPanel("gallery")}
+            onSelectTask={(taskId) => {
+              setHomeMode(false);
+              setContextPanel(null);
+              void onSelectTask(taskId);
+            }}
+            recentTasks={recentTasks}
+          />
           <section className="chat-surface">
             <h1 className="sr-only">{category} for {destination}</h1>
             <Header
@@ -257,7 +295,16 @@ export default function App({
               onOpenGallery={() => setContextPanel("gallery")}
               onOpenNavigation={() => setNavigationOpen(true)}
             />
-            <main className="conversation-main">
+            {homeMode ? (
+              <TaskStart
+                destination={destination}
+                onCancel={() => setHomeMode(false)}
+                onCreate={async (objective) => {
+                  await onCreateTask(objective);
+                  setHomeMode(false);
+                }}
+              />
+            ) : <main className="conversation-main">
               <AssistantThread>
                 <InThreadTimeline events={activity} snapshot={draft} status={status} onOpenActivity={() => setContextPanel("activity")} />
                 <ArtifactRegistry artifacts={artifacts} {...(onArtifactAnswer ? { onAnswer: onArtifactAnswer } : {})} {...(onArtifactAuthorize ? { onAuthorize: onArtifactAuthorize } : {})} />
@@ -276,14 +323,14 @@ export default function App({
                 {result.status === "failed" ? <section className="result-state error" role="alert"><span>Result unavailable</span><strong>The call evidence could not be projected safely.</strong><small>No answer was invented and automatic retry is disabled.</small></section> : null}
                 {result.status === "ready" ? <ResultSummary questions={draft.contract.questions} output={result} /> : null}
               </AssistantThread>
-            </main>
+            </main>}
           </section>
           <ContextPanel
             events={activity}
             media={media}
             mode={contextPanel ?? "activity"}
             onChangeMode={setContextPanel}
-            onClose={() => setContextPanel(null)}
+            onClose={closeContextPanel}
             open={Boolean(contextPanel)}
             snapshot={draft}
             status={status}
