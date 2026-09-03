@@ -68,6 +68,7 @@ export function CallBrief({
 }: CallBriefProps) {
   const { contract, revision } = snapshot;
   const [editing, setEditing] = useState(false);
+  const [reviewing, setReviewing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [objective, setObjective] = useState(contract.objective);
@@ -83,6 +84,7 @@ export function CallBrief({
     setPrivateBackground(contract.context.privateBackground ?? "");
     setShareableFacts(contract.context.shareableFacts.map(({ label, value }) => `${label}: ${value}`).join("\n"));
     setEditing(false);
+    setReviewing(false);
     setSaving(false);
     setSaveError(null);
   }, [contract, revision]);
@@ -116,89 +118,93 @@ export function CallBrief({
 
   return (
     <>
-      <section className="brief" aria-label="Call brief">
-        <div className="destination-row">
-          <span className="hotel-icon"><DestinationIcon /></span>
-          <div className="destination-name">
-            <strong>{contract.destination.displayName}</strong>
-            <span>{maskPhoneNumber(contract.destination.e164PhoneNumber)} · {languageName(contract.languages.call)}</span>
-          </div>
-          <span className="verified"><span className="status-dot" />Destination verified</span>
+      <section className={`brief inline-call-plan ${reviewing || editing ? "is-expanded" : ""}`} aria-label="Exact call plan">
+        <div className="call-plan-heading">
+          <span className="plan-symbol"><LockIcon /></span>
+          <div><span>Approval needed</span><h2>Review the call plan</h2><p>{contract.questions.length} questions · {languageName(contract.languages.call)} · no booking or payment</p></div>
+          <span className="revision-chip">Draft v{revision}</span>
         </div>
-        <div className="brief-body">
-          <div className="brief-row">
-            <div className="brief-label">Objective</div>
-            <div className="brief-content">{contract.objective}</div>
-          </div>
-          <div className="brief-row">
-            <div className="brief-label">Questions</div>
-            <div className="assistant-questions" aria-label="Questions CallBridge will ask">
-              <div className="assistant-question-cue"><span className="assistant-orb">CB</span><span>CallBridge will ask</span></div>
-              <ol className="question-list">
-                {contract.questions.map((question, index) => (
-                  <li key={question.id}><span className="question-number">{index + 1}</span><span>{question.prompt}</span></li>
-                ))}
-              </ol>
-            </div>
-          </div>
-          {(contract.context.privateBackground || contract.context.shareableFacts.length > 0) ? (
-            <div className="brief-row">
-              <div className="brief-label">Context</div>
-              <div className="context-summary">
-                {contract.context.privateBackground ? <p><strong>Private background</strong><span>{contract.context.privateBackground}</span></p> : null}
-                {contract.context.shareableFacts.length > 0 ? (
-                  <p><strong>May share when useful</strong><span>{contract.context.shareableFacts.map(({ label, value }) => `${label}: ${value}`).join(" · ")}</span></p>
-                ) : null}
+        {reviewing || editing ? (
+          <div className="plan-details">
+            <div className="destination-row">
+              <span className="hotel-icon"><DestinationIcon /></span>
+              <div className="destination-name">
+                <strong>{contract.destination.displayName}</strong>
+                <span>{maskPhoneNumber(contract.destination.e164PhoneNumber)} · {languageName(contract.languages.call)}</span>
               </div>
+              <span className="verified"><span className="status-dot" />Destination verified</span>
             </div>
-          ) : null}
-          <div className="brief-row">
-            <div className="brief-label">Authority</div>
-            <ul className="brief-list authority">
-              <li><CrossIcon />No booking, reservation changes, cancellation, or payment.</li>
-              <li><CrossIcon />No fee acceptance, terms, or other commitment.</li>
-            </ul>
-          </div>
-          <div className="brief-row">
-            <div className="brief-label">Spending limit</div>
-            <div className="rate-summary">
-              {snapshot.pricing.status === "ready" ? (
-                <>
-                  <strong>{formatProviderMoney(snapshot.pricing.quote.pstn.currentPricePerMinute, snapshot.pricing.quote.pstn.currency)} / minute PSTN</strong>
-                  <span>
-                    Estimated PSTN maximum {formatProviderMoney(snapshot.pricing.quote.pstn.estimatedMaximumCharge, snapshot.pricing.quote.pstn.currency)}
-                    {snapshot.pricing.quote.quote.accountSpecific ? " · account-specific rate" : " · public retail rate"}
-                  </span>
-                  <small>Excludes Media Streams, OpenAI audio, taxes, and carrier surcharges.</small>
-                </>
-              ) : <strong>Checking the current destination rate…</strong>}
-              <span>{formatMinorUnits(contract.costCeiling.maxTotalMinorUnits, contract.costCeiling.currency)} platform maximum · one attempt · up to {Math.ceil(contract.policy.maxConnectedSeconds / 60)} connected minutes</span>
-              <small>Confirmation requires a fresh quote. Unused reserved credits are released after final cost settlement.</small>
-            </div>
-          </div>
-          <div className="disclosure">“{contract.disclosure.text}”</div>
-          {editing ? (
-            <form className="brief-editor" onSubmit={(event) => void save(event)}>
-              <div className="editor-heading"><strong>Edit this exact draft</strong><span>Saving creates a new revision and resets confirmation.</span></div>
-              <label>Objective<textarea value={objective} onChange={(event) => setObjective(event.target.value)} rows={3} /></label>
-              <label>Questions to ask<span className="field-hint">One question per line</span><textarea value={questions} onChange={(event) => setQuestions(event.target.value)} rows={5} /></label>
-              <label>Private background<span className="field-hint">Used for reasoning; never said aloud</span><textarea value={privateBackground} onChange={(event) => setPrivateBackground(event.target.value)} rows={3} /></label>
-              <label>Facts the agent may share<span className="field-hint">One “Label: value” per line</span><textarea value={shareableFacts} onChange={(event) => setShareableFacts(event.target.value)} rows={3} /></label>
-              <div className="editor-actions">
-                <button className="button secondary" type="button" disabled={saving} onClick={() => setEditing(false)}>Cancel</button>
-                <button className="button primary" type="submit" disabled={saving || !objective.trim() || !questions.trim()}>{saving ? "Saving…" : "Save changes"}</button>
+            <div className="brief-body">
+              <div className="brief-row">
+                <div className="brief-label">Objective</div>
+                <div className="brief-content">{contract.objective}</div>
               </div>
-              {saveError ? <p className="editor-error" role="alert">{saveError}</p> : null}
-            </form>
-          ) : null}
-        </div>
+              <div className="brief-row">
+                <div className="brief-label">Questions</div>
+                <div className="assistant-questions" aria-label="Questions CallBridge will ask">
+                  <ol className="question-list">
+                    {contract.questions.map((question, index) => (
+                      <li key={question.id}><span className="question-number">{index + 1}</span><span>{question.prompt}</span></li>
+                    ))}
+                  </ol>
+                </div>
+              </div>
+              {(contract.context.privateBackground || contract.context.shareableFacts.length > 0) ? (
+                <div className="brief-row">
+                  <div className="brief-label">Context</div>
+                  <div className="context-summary">
+                    {contract.context.privateBackground ? <p><strong>Private background</strong><span>{contract.context.privateBackground}</span></p> : null}
+                    {contract.context.shareableFacts.length > 0 ? <p><strong>May share when useful</strong><span>{contract.context.shareableFacts.map(({ label, value }) => `${label}: ${value}`).join(" · ")}</span></p> : null}
+                  </div>
+                </div>
+              ) : null}
+              <div className="brief-row">
+                <div className="brief-label">Authority</div>
+                <ul className="brief-list authority"><li><CrossIcon />No booking, reservation changes, cancellation, or payment.</li><li><CrossIcon />No fee acceptance, terms, or other commitment.</li></ul>
+              </div>
+              <div className="brief-row">
+                <div className="brief-label">Spending limit</div>
+                <div className="rate-summary">
+                  {snapshot.pricing.status === "ready" ? <><strong>{formatProviderMoney(snapshot.pricing.quote.pstn.currentPricePerMinute, snapshot.pricing.quote.pstn.currency)} / minute PSTN</strong><span>Estimated PSTN maximum {formatProviderMoney(snapshot.pricing.quote.pstn.estimatedMaximumCharge, snapshot.pricing.quote.pstn.currency)}{snapshot.pricing.quote.quote.accountSpecific ? " · account-specific rate" : " · public retail rate"}</span><small>Excludes Media Streams, OpenAI audio, taxes, and carrier surcharges.</small></> : <strong>Checking the current destination rate…</strong>}
+                  <span>{formatMinorUnits(contract.costCeiling.maxTotalMinorUnits, contract.costCeiling.currency)} platform maximum · one attempt · up to {Math.ceil(contract.policy.maxConnectedSeconds / 60)} connected minutes</span>
+                  <small>Confirmation requires a fresh quote. Unused reserved credits are released after final cost settlement.</small>
+                </div>
+              </div>
+              <div className="disclosure">“{contract.disclosure.text}”</div>
+              {editing ? (
+                <form className="brief-editor" onSubmit={(event) => void save(event)}>
+                  <div className="editor-heading"><strong>Edit this exact draft</strong><span>Saving creates a new revision and resets confirmation.</span></div>
+                  <label>Objective<textarea value={objective} onChange={(event) => setObjective(event.target.value)} rows={3} /></label>
+                  <label>Questions to ask<span className="field-hint">One question per line</span><textarea value={questions} onChange={(event) => setQuestions(event.target.value)} rows={5} /></label>
+                  <label>Private background<span className="field-hint">Used for reasoning; never said aloud</span><textarea value={privateBackground} onChange={(event) => setPrivateBackground(event.target.value)} rows={3} /></label>
+                  <label>Facts the agent may share<span className="field-hint">One “Label: value” per line</span><textarea value={shareableFacts} onChange={(event) => setShareableFacts(event.target.value)} rows={3} /></label>
+                  <div className="editor-actions"><button className="button secondary" type="button" disabled={saving} onClick={() => setEditing(false)}>Cancel</button><button className="button primary" type="submit" disabled={saving || !objective.trim() || !questions.trim()}>{saving ? "Saving…" : "Save changes"}</button></div>
+                  {saveError ? <p className="editor-error" role="alert">{saveError}</p> : null}
+                </form>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
         <div className="brief-footer">
           <div className="approval-copy"><strong>Only you can place this call</strong><span>Approval applies only to draft v{revision}. Editing the brief resets it.</span></div>
           <div className="brief-actions">
-            <button className="button secondary" type="button" aria-expanded={editing} onClick={() => setEditing((value) => !value)}>{editing ? "Close editor" : "Edit brief"}</button>
-            <button className="button primary" type="button" disabled={confirmationDisabled || editing} onClick={onConfirm}>Confirm call</button>
+            <button className="button secondary" type="button" aria-expanded={editing} onClick={() => { setReviewing(false); setEditing((value) => !value); }}>{editing ? "Close editor" : "Edit plan"}</button>
+            <button className="button primary" type="button" disabled={confirmationDisabled || editing} onClick={() => setReviewing((value) => !value)}>{reviewing ? "Close review" : "Review call plan"}</button>
           </div>
         </div>
+        {reviewing ? (
+          <div className="final-confirmation-step" role="region" aria-label="Final confirmation">
+            <div>
+              <span>Final confirmation · draft v{revision}</span>
+              <strong>Place one information-only call to {contract.destination.displayName}?</strong>
+              <p>The agent may ask only the {contract.questions.length} questions above, share only the listed facts, and make no commitment. Automatic retry is disabled.</p>
+            </div>
+            <div className="final-confirmation-actions">
+              <button className="button secondary" type="button" onClick={() => setReviewing(false)}>Go back</button>
+              <button className="button primary confirm-external-action" type="button" disabled={confirmationDisabled} onClick={onConfirm}>Confirm one call</button>
+            </div>
+          </div>
+        ) : null}
       </section>
       <p className="webpage-only"><LockIcon />Confirmation is a webpage-only action and is not exposed through WebMCP.</p>
     </>

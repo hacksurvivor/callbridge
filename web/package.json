@@ -13,8 +13,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@assistant-ui/react": "0.15.17",
     "@convex-dev/workos": "0.0.3",
     "@workos-inc/authkit-react": "0.16.2",
+    "assistant-stream": "0.3.40",
     "convex": "1.43.0",
     "react": "19.2.8",
     "react-dom": "19.2.8"

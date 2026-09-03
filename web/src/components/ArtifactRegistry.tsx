@@ -155,7 +155,7 @@ function UserQuestionArtifactView({
   );
 }
 
-const evidenceAssets: Record<string, { src: string; alt: string }> = {
+export const evidenceAssets: Record<string, { src: string; alt: string }> = {
   "fixture:evidence:late-arrival-policy": {
     src: "/artifacts/late-arrival-policy.svg",
     alt: "Controlled provider late-arrival policy fixture",

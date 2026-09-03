@@ -1,49 +1,70 @@
-# Historical mobile design direction
+# CallBridge design system
 
-> This document records the pre-WebMCP native-mobile visual direction. It is not
-> the source of truth for the hackathon submission. The current web-first product,
-> safety, proof, and judge-flow decisions are documented in
-> [`docs/SUBMISSION.md`](docs/SUBMISSION.md) and the production web source under
-> `web/`. Preserve this history; do not use it to redesign the approved web UI.
+## Product experience
 
-## Intent
+CallBridge is a conversation-first assistant for tasks that may lead to a phone call. The interface should feel immediately familiar to a ChatGPT user: natural-language input, plain assistant responses, visible but compact reasoning and tool activity, and secondary context that appears only when requested or operationally relevant.
 
-CallBridge should feel like a calm personal concierge for people who find calls stressful, not like an operations dashboard. The user writes naturally; the agent carries the work; the user only sees facts and decisions that genuinely need them.
+The product is not an operations dashboard. The conversation remains the primary surface. Users should only manage the exact facts, choices, and approvals that require them.
 
-## Visual thesis
+## Web direction: Chat + activity drawer
 
-**Stagecraft cyclorama dawn** — an ink-black iOS surface with a cobalt horizon that makes active work feel present but contained. White is deliberately reserved for a decision sheet. Rose appears only for stop and cancellation states.
+The approved web composition has three responsive regions:
 
-This gives the product a distinct world without inventing a decorative brand system: a quiet, premium control surface rather than a generic light chat with stacked cards.
+1. A quiet conversation sidebar for new tasks, search, task images, and thread history.
+2. A centered conversation column with a maximum readable width of 760px and a bottom-anchored composer.
+3. A contextual drawer that switches between Activity and Images. It is open for active desktop work, closed by default on mobile, and never competes with the conversation when it is unnecessary.
 
-## Interaction model
+The direction was approved in Scratchpad as `2 · Chat + activity drawer` under seed `scratchpad-chatgpt-direction-2`.
 
-- Three persistent native-style destinations: Chat, Activity, and You.
-- Chat begins with one large natural-language question and a composer.
-- A submitted request becomes a readable draft; the first call always needs explicit confirmation.
-- During work, Activity is a factual cue sheet: observable status, verified result, optional transcript, and a visible stop control. It never exposes model reasoning.
-- A decision uses a high-contrast light sheet with price, cancellation terms, and clear next actions.
+## Visual language
 
-## Component rules
+- Use white for the conversation canvas and a quiet neutral gray for navigation and secondary surfaces.
+- Use plain assistant text without an avatar, border, or message card.
+- Use a soft gray bubble for the user's message.
+- Use black for primary actions and neutral iconography.
+- Reserve red for consequential approval or confirmation states. Use neutral or amber-brown treatment for stop and error states; do not use red as general brand decoration or progress color.
+- Use blue for neutral running states and green for verified completion.
+- Use 1px neutral dividers, 12–14px content-card radii, and a 20–22px composer radius. Avoid stacked decorative cards.
+- Use the platform system sans-serif stack. Body copy is 14px on desktop and remains readable without zoom on mobile.
 
-- Use the system safe area and a persistent bottom tab bar.
-- Keep cards purposeful: active task, draft, factual event, or decision. Do not use containers as generic decoration.
-- Use a single cobalt action colour (`#2E6AFF`) for forward motion and semantic rose only for stopping/cancelling.
-- Copy should say what the app knows and what it will do. The local preview never suggests that it has placed a live call.
+## Conversation components
 
-## References and sources
+### Reasoning
 
-- Mobbin: Claude iOS conversation flow for the low-friction natural-language entry point.
-- Mobbin: Superlist activity patterns for a scannable task timeline.
-- Context7 Expo guidance: safe-area-aware iOS layout and press feedback.
-- Impeccable seed `f06a6885`: own-world visual direction and finish contract.
+Reasoning is a concise, safe product-facing summary, never hidden chain-of-thought. It uses an expandable native disclosure row. While streaming, the row opens automatically and shows a restrained waveform; after completion it collapses and remains available.
 
-## Visual review
+### Tool use
 
-Reviewed at 390 × 844 after the rewrite:
+Tool use appears as a compact inline row showing the action, tool count, and running or complete state. The Activity drawer carries the detailed tool log. Protected confirmation is explicitly described as unavailable to tools.
 
-- Home: black surface, unambiguous single prompt, anchored composer, native tab bar.
-- Draft: only the request, actual boundaries, and the confirmation button are prominent.
-- Active: horizontal cobalt live horizon plus a factual time line and one visible stop control.
+### Text streaming
 
-The next visual iteration should replace text-only action affordances (`Voice`, `Link`, `Photo`) with platform SF Symbols after adding their native Expo rendering surface; this avoids shipping improvised Unicode glyphs.
+Assistant text streams directly into the conversation. A quiet three-dot indicator communicates activity without moving the layout or replacing existing text.
+
+### Timeline
+
+The conversation shows four compact stages: Request, Prepared, Approval, and Result. The full factual event history belongs in the Activity drawer.
+
+### Call plan
+
+The call plan enters the conversation as a compact approval card. Its exact questions, context, authority, pricing, and disclosure expand only when the user selects Review. Editing creates a new revision and resets confirmation. Final confirmation remains a webpage-only action.
+
+### Images
+
+The sidebar exposes Files & images with an accurate count. Selecting it opens the drawer's Images tab. Only display-approved evidence is rendered; blocked or unsupported references never become broken thumbnails.
+
+## Responsive behavior
+
+- At wide desktop sizes, the sidebar, conversation, and contextual drawer can coexist.
+- Below 1240px, the contextual drawer overlays from the right.
+- Below 820px, the conversation sidebar also becomes an overlay and the Activity drawer stays closed on initial load.
+- At 390px, the composer remains inside the viewport, the timeline stays legible, and the page has no horizontal overflow.
+- Motion respects `prefers-reduced-motion`.
+
+## Interaction and accessibility
+
+- Every control has a visible keyboard focus state and an accessible name.
+- Secondary text must meet WCAG AA contrast against its surface.
+- Disabled attachment, dictation, calling, and confirmation states remain visibly distinct and truthful.
+- The interface never implies a call was placed, an image exists, or a tool completed unless the backing state says so.
+- Error states state both the failure and the safety outcome: nothing was shared and no call was placed.

@@ -2,7 +2,7 @@ import type { InquiryActivityEvent } from "../../../shared/inquiryWebMcp.js";
 import type { InquiryTaskSnapshot, InquiryTaskStatus } from "../../../shared/inquiryState.js";
 import { CheckIcon, ShieldIcon } from "./Icons.js";
 
-function eventCopy(event: InquiryActivityEvent, snapshot: InquiryTaskSnapshot): { title: string; detail: string } {
+export function activityEventCopy(event: InquiryActivityEvent, snapshot: InquiryTaskSnapshot): { title: string; detail: string } {
   const destination = snapshot.contract.destination.displayName;
   const question = event.questionId
     ? snapshot.contract.questions.find(({ id }) => id === event.questionId)?.prompt
@@ -32,7 +32,7 @@ function eventCopy(event: InquiryActivityEvent, snapshot: InquiryTaskSnapshot): 
   return copy[event.type];
 }
 
-function fallbackEvents(snapshot: InquiryTaskSnapshot): InquiryActivityEvent[] {
+export function fallbackActivityEvents(snapshot: InquiryTaskSnapshot): InquiryActivityEvent[] {
   return [
     {
       eventId: "fallback:draft-created",
@@ -64,7 +64,7 @@ export function ActivityRail({
   snapshot: InquiryTaskSnapshot;
   status: InquiryTaskStatus;
 }) {
-  const visibleEvents = events.length > 0 ? events : fallbackEvents(snapshot);
+  const visibleEvents = events.length > 0 ? events : fallbackActivityEvents(snapshot);
   return (
     <aside className="activity-rail" aria-labelledby="activity-title">
       <div className="activity-heading">
@@ -73,7 +73,7 @@ export function ActivityRail({
       </div>
       <ol className="activity-list">
         {visibleEvents.map((event) => {
-          const item = eventCopy(event, snapshot);
+          const item = activityEventCopy(event, snapshot);
           return (
             <li key={event.eventId}>
               <CheckIcon className="activity-check" />

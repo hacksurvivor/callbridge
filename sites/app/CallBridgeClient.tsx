@@ -29,7 +29,7 @@ function BrandMark() {
 function AccessState({ kicker, title, detail }: { kicker: string; title: string; detail?: string }) {
   return (
     <div className="access-shell">
-      <header className="topbar">
+      <header className="topbar access-topbar">
         <div className="brand"><BrandMark />CallBridge</div>
         <div className="chatgpt-status"><span className="status-dot" />Built for ChatGPT</div>
       </header>

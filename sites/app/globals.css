@@ -14,6 +14,7 @@ html, body { min-width: 320px; min-height: 100%; margin: 0; }
 body { background: #fff; }
 
 .access-shell { min-height: 100vh; background: #fff; }
+.topbar.access-topbar { display: flex; justify-content: space-between; }
 .topbar { height: 58px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; }
 .brand { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 650; }
 .brand-mark { width: 27px; height: 27px; display: grid; place-items: center; border: 1px solid #d9dade; border-radius: 9px; }
