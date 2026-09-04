@@ -5,7 +5,25 @@ hotel flow is one repeatable demo fixture, not a vertical restriction.
 
 ## 2026-09-03 submission candidate checkpoint
 
-Current source checkpoint (dirty worktree; not committed or deployed):
+The original candidate checkpoint below is retained as historical evidence. The
+current release adds a sixth, server-owned `create_demo_call_draft` tool and an
+isolated Aurora Demo Hotel ConversationRelay recipient. It does not change the
+five general inquiry tools or webpage-only confirmation boundary.
+
+Current source verification:
+
+- `npm run verify:submission` passes with 65 focused backend tests, 26 web tests,
+  80 telephony tests, all TypeScript builds, the production web build, and
+  production-bundle inspection.
+- Root `npm test` passes all 218 discovered repository tests.
+- The controlled recipient is disabled by default and cannot admit a call until
+  its private number, expected origin, Twilio signature secret, daily budget,
+  and exact outbound reservation are present.
+- Its deterministic fact sheet answers supported questions with canonical
+  server text, preserves an explicit unknown topic, rejects direct calls, and
+  exposes no destination number through WebMCP or the browser.
+
+Earlier 2026-09-03 checkpoint:
 
 - `npm run verify:submission` passed: 65 focused inquiry backend tests, 20 web
   tests, 76 telephony-worker tests, backend and worker TypeScript builds, the
@@ -25,7 +43,7 @@ Current source checkpoint (dirty worktree; not committed or deployed):
 - Current production dependency audits report zero known vulnerabilities. The
   six direct runtime packages declare permissive licenses: Apache-2.0, MIT, or
   ISC; CallBridge itself now carries a root MIT license.
-- The production bundle contains the five inquiry tools and none of the three
+- The production bundle contained the five inquiry tools and none of the three
   task-artifact tool names or artifact fixture surface.
 - Target-browser dynamic abort/re-registration could not be proven because the
   isolated automation tab did not expose `document.modelContext`. Per the

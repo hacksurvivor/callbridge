@@ -14,14 +14,22 @@
     "CALLBRIDGE_GEO_PERMISSION_MODE": "just_in_time_low_risk",
     "CALLBRIDGE_MAX_PSTN_RATE_USD": "2.00",
     "CALLBRIDGE_MAX_PSTN_CALL_USD": "6.00",
+    "DEMO_HOTEL_ENABLED": "false",
+    "DEMO_HOTEL_DAILY_ATTEMPT_LIMIT": "20",
+    "DEMO_HOTEL_MAX_CONNECTED_SECONDS": "180",
+    "DEMO_HOTEL_MAX_DAILY_COST_MINOR_UNITS": "2000",
+    "DEMO_HOTEL_MAX_RESERVED_COST_PER_CALL_MINOR_UNITS": "100",
+    "DEMO_HOTEL_FACT_SHEET_REVISION": "aurora_demo_hotel_v1",
     "CALLBACK_URL": "https://hardy-hedgehog-401.convex.site/webhooks/inquiry-worker"
   },
   "durable_objects": {
     "bindings": [
-      { "name": "CALL_SESSIONS", "class_name": "CallSession" }
+      { "name": "CALL_SESSIONS", "class_name": "CallSession" },
+      { "name": "DEMO_HOTEL_RECIPIENT", "class_name": "DemoHotelRecipient" }
     ]
   },
   "migrations": [
-    { "tag": "v1", "new_sqlite_classes": ["CallSession"] }
+    { "tag": "v1", "new_sqlite_classes": ["CallSession"] },
+    { "tag": "v2", "new_sqlite_classes": ["DemoHotelRecipient"] }
   ]
 }

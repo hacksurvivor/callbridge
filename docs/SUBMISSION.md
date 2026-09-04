@@ -14,13 +14,19 @@ an evidence-bound result that ChatGPT can read and explain.
 
 Without WebMCP, ChatGPT can describe a call but cannot safely manipulate the
 authenticated, revisioned call task visible to the user. CallBridge exposes five
-artifact-free tools:
+general artifact-free tools:
 
 - `create_call_draft`
 - `update_call_draft`
 - `read_call_draft`
 - `get_call_status`
 - `get_call_result`
+
+For a repeatable judge-safe proof, `create_demo_call_draft` creates the same
+general inquiry contract against Aurora Demo Hotel, a disclosed automated test
+desk reached through the real phone network. The judge supplies original
+information-only questions; the server owns its private number, safety policy,
+maximum duration, one-attempt rule, and challenge credit.
 
 Confirmation, dispatch, payment, booking, cancellation, and message sending are
 not tools. The visible **Confirm call** button is trusted-user-action-only and is
@@ -29,12 +35,13 @@ bound to the exact execution revision and provider quote.
 ## Three-minute demo
 
 1. Open the public judge URL and choose **Continue with ChatGPT**.
-2. Ask ChatGPT: “Call this Japanese hotel. Ask whether I can arrive after
-   midnight. Do not book anything or accept a fee.”
+2. Ask ChatGPT: “Use the controlled demo hotel. Ask whether I can arrive after
+   midnight, when breakfast is served, and whether renovation noise is scheduled.”
 3. Show WebMCP creating the complete visible brief.
 4. Review destination, questions, shareable context, authority, and ceiling;
    click **Confirm call** on the webpage.
-5. Show one disclosed multilingual call and factual Activity.
+5. Show the disclosed real PSTN call between CallBridge and the controlled AI
+   hotel desk, including one intentionally unknown answer, and factual Activity.
 6. Show the translated answer and proof receipt; ask ChatGPT to explain it.
 7. Close with the eight-market fixture matrix to prove that the hotel is a demo,
    not a product boundary.
@@ -63,7 +70,7 @@ slice is the WebMCP-era web application and its release hardening:
 
 - authenticated WebMCP task creation/revision/status/result;
 - visible exact-revision human confirmation;
-- artifact-free five-tool submission catalog;
+- artifact-free five general tools plus one controlled-recipient creator;
 - generalized inquiry flow rather than a hotel-only product;
 - evidence-bound public result receipt;
 - judge access, recovery, release gates, public packaging, and demo materials.

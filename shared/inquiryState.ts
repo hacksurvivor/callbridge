@@ -101,6 +101,7 @@ export type InquiryTaskSnapshot = {
   revision: number;
   executionRevision: InquiryExecutionRevision;
   contract: InquiryCallContract;
+  recipientKind: "controlled_demo" | null;
   confirmation: {
     state: "not_ready" | "ready" | "confirmed" | "revoked" | "expired";
     intentId: string | null;

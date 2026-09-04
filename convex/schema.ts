@@ -46,6 +46,8 @@ export default defineSchema({
     // The shared Zod contract is the single structural source of truth. Every
     // public write parses it before storage; v.any avoids a second drifting schema.
     contract: v.any(),
+    // Only trusted server mutations can assign a controlled demo recipient.
+    demoRecipientId: v.optional(v.literal("aurora_demo_hotel_v1")),
     confirmationState: v.union(
       v.literal("not_ready"),
       v.literal("ready"),

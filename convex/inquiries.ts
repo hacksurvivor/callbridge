@@ -3,8 +3,10 @@ import { ConvexError, v } from "convex/values";
 
 import {
   computeInquiryExecutionRevision,
+  INQUIRY_FORBIDDEN_ACTIONS,
   parseInquiryCallContract,
   parseInquiryPlaybook,
+  serverInquiryDisclosure,
   type InquiryCallContract,
 } from "../shared/inquiryContracts.js";
 import {
@@ -34,6 +36,7 @@ const taskSnapshotValidator = v.object({
   revision: v.number(),
   executionRevision: v.string(),
   contract: v.any(),
+  recipientKind: v.union(v.literal("controlled_demo"), v.null()),
   confirmation: v.object({
     state: v.string(),
     intentId: v.union(v.string(), v.null()),
@@ -137,6 +140,7 @@ function taskSnapshot(task: {
   revision: number;
   executionRevision: string;
   contract: InquiryCallContract;
+  demoRecipientId?: "aurora_demo_hotel_v1";
   confirmationState: string;
   confirmationIntentId?: Id<"inquiryConfirmationIntents">;
   confirmationExpiresAt?: string;
@@ -151,7 +155,18 @@ function taskSnapshot(task: {
     status: task.status,
     revision: task.revision,
     executionRevision: task.executionRevision,
-    contract: task.contract,
+    contract: task.demoRecipientId
+      ? {
+          ...task.contract,
+          destination: {
+            ...task.contract.destination,
+            // A valid non-routable presentation value keeps the internal E.164
+            // out of WebMCP, page source, screenshots, and browser state.
+            e164PhoneNumber: "+10000000000",
+          },
+        }
+      : task.contract,
+    recipientKind: task.demoRecipientId ? "controlled_demo" as const : null,
     confirmation: {
       state: task.confirmationState,
       intentId: task.confirmationIntentId ? String(task.confirmationIntentId) : null,
@@ -407,6 +422,129 @@ export const createDraft = mutation({
   },
 });
 
+const demoQuestionValidator = v.object({
+  id: v.string(),
+  prompt: v.string(),
+  required: v.boolean(),
+});
+
+export const createDemoDraft = mutation({
+  args: {
+    idempotencyKey: v.string(),
+    objective: v.string(),
+    questions: v.array(demoQuestionValidator),
+    shareableContext: v.optional(v.string()),
+    resultLanguage: v.optional(v.string()),
+  },
+  returns: taskSnapshotValidator,
+  handler: async (ctx, args) => {
+    const ownerId = await requireOwnerId(ctx);
+    const idempotencyKey = requireIdempotencyKey(args.idempotencyKey);
+    const ownerCreateKey = `${ownerId}:${idempotencyKey}`;
+    const destinationNumber = process.env.DEMO_HOTEL_NUMBER?.trim();
+    if (!destinationNumber || !/^\+[1-9]\d{6,14}$/.test(destinationNumber)) {
+      throw new ConvexError({ code: "DEMO_RECIPIENT_UNAVAILABLE" });
+    }
+    const contract = parseInquiryCallContract({
+      schemaVersion: 1,
+      category: "accommodation",
+      destination: {
+        displayName: "Aurora Demo Hotel · Controlled demo recipient",
+        e164PhoneNumber: destinationNumber,
+        countryCode: "US",
+      },
+      objective: args.objective,
+      questions: args.questions,
+      languages: { call: "en-US", result: args.resultLanguage ?? "en" },
+      context: {
+        shareableFacts: args.shareableContext?.trim()
+          ? [{ id: "judge-context", label: "Context from the caller", value: args.shareableContext.trim() }]
+          : [],
+      },
+      disclosure: serverInquiryDisclosure("en-US"),
+      costCeiling: { currency: "USD", maxTotalMinorUnits: 100 },
+      policy: {
+        id: "controlled-demo-information-only-v1",
+        authority: "gather_information_only",
+        forbiddenActions: [...INQUIRY_FORBIDDEN_ACTIONS],
+        maxAttempts: 1,
+        automaticRetry: false,
+        maxConnectedSeconds: 180,
+        audioRecording: false,
+      },
+    });
+    const executionRevision = await computeInquiryExecutionRevision(contract);
+    const existing = await ctx.db
+      .query("inquiryTasks")
+      .withIndex("by_owner_create_key", (q) => q.eq("ownerCreateKey", ownerCreateKey))
+      .unique();
+    if (existing) {
+      if (existing.createExecutionRevision !== executionRevision || existing.demoRecipientId !== "aurora_demo_hotel_v1") {
+        throw new ConvexError({ code: "IDEMPOTENCY_CONFLICT" });
+      }
+      return taskSnapshot(existing);
+    }
+
+    const now = new Date().toISOString();
+    const grantEntryKey = `grant:${ownerId}:controlled-demo-v1`;
+    const existingGrant = await ctx.db
+      .query("inquiryCreditLedger")
+      .withIndex("by_entry_key", (q) => q.eq("entryKey", grantEntryKey))
+      .unique();
+    if (!existingGrant) {
+      const ownerCurrencyKey = `${ownerId}:USD`;
+      const account = await ctx.db
+        .query("inquiryCreditAccounts")
+        .withIndex("by_owner_currency", (q) => q.eq("ownerCurrencyKey", ownerCurrencyKey))
+        .unique();
+      if (account) {
+        await ctx.db.patch("inquiryCreditAccounts", account._id, {
+          balanceMinorUnits: account.balanceMinorUnits + 100,
+          updatedAt: now,
+        });
+      } else {
+        await ctx.db.insert("inquiryCreditAccounts", {
+          ownerId,
+          currency: "USD",
+          ownerCurrencyKey,
+          balanceMinorUnits: 100,
+          reservedMinorUnits: 0,
+          updatedAt: now,
+        });
+      }
+      await ctx.db.insert("inquiryCreditLedger", {
+        ownerId,
+        currency: "USD",
+        entryKey: grantEntryKey,
+        kind: "grant",
+        amountMinorUnits: 100,
+        occurredAt: now,
+      });
+    }
+
+    const taskId = await ctx.db.insert("inquiryTasks", {
+      ownerId,
+      ownerCreateKey,
+      createIdempotencyKey: idempotencyKey,
+      createExecutionRevision: executionRevision,
+      status: "draft",
+      revision: 1,
+      executionRevision,
+      contract,
+      demoRecipientId: "aurora_demo_hotel_v1",
+      confirmationState: "not_ready",
+      nextEventSequence: 1,
+      resultState: "not_ready",
+      createdAt: now,
+      updatedAt: now,
+    });
+    await appendEvent(ctx, { taskId, type: "draft_created", occurredAt: now });
+    const created = await ctx.db.get("inquiryTasks", taskId);
+    if (!created) throw new ConvexError({ code: "INTERNAL_ERROR" });
+    return taskSnapshot(created);
+  },
+});
+
 export const readDraft = query({
   args: { taskId: v.id("inquiryTasks") },
   returns: taskSnapshotValidator,
@@ -444,6 +582,7 @@ export const updateDraft = mutation({
   handler: async (ctx, args) => {
     const ownerId = await requireOwnerId(ctx);
     const task = await requireOwnedTask(ctx, args.taskId, ownerId);
+    if (task.demoRecipientId) throw new ConvexError({ code: "POLICY_DENIED" });
     if (task.status !== "draft" && task.status !== "awaiting_confirmation") {
       throw new ConvexError({ code: "INVALID_TRANSITION" });
     }

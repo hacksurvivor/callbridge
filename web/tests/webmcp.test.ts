@@ -25,6 +25,7 @@ function client(overrides: Partial<InquiryToolClient> = {}): InquiryToolClient {
   const unexpected = () => Promise.reject(new Error("not implemented in this fixture"));
   return {
     createCallDraft: unexpected,
+    createDemoCallDraft: unexpected,
     updateCallDraft: unexpected,
     readCallDraft: unexpected,
     getCallStatus: unexpected,
@@ -34,7 +35,7 @@ function client(overrides: Partial<InquiryToolClient> = {}): InquiryToolClient {
 }
 
 describe("CallBridge generalized WebMCP registration", () => {
-  it("registers exactly the five inquiry tools and excludes artifact and protected actions", async () => {
+  it("registers the five general inquiry tools plus the controlled demo creator and excludes protected actions", async () => {
     const tools: WebMcpTool[] = [];
     const modelContext: WebMcpModelContext = {
       registerTool: vi.fn(async (tool) => { tools.push(tool); }),
@@ -56,14 +57,15 @@ describe("CallBridge generalized WebMCP registration", () => {
     expect(tools.map(({ name }) => name)).not.toContain("send_message");
     expect(tools.map(({ name }) => name)).not.toContain("submit_form");
     expect(tools.map(({ name }) => name)).not.toContain("pay");
-    expect(tools).toHaveLength(5);
+    expect(tools).toHaveLength(6);
   });
 
   it("selects the least-authority tool palette for every lifecycle phase", () => {
     expect(inquiryToolNamesForPhase("none")).toEqual([]);
-    expect(inquiryToolNamesForPhase("no_task")).toEqual(["create_call_draft"]);
+    expect(inquiryToolNamesForPhase("no_task")).toEqual(["create_call_draft", "create_demo_call_draft"]);
     expect(inquiryToolNamesForPhase("editable")).toEqual([
       "create_call_draft",
+      "create_demo_call_draft",
       "update_call_draft",
       "read_call_draft",
     ]);
@@ -137,6 +139,7 @@ describe("CallBridge generalized WebMCP registration", () => {
     const tools = callBridgeWebMcpTools(client());
     expect(Object.fromEntries(tools.map((tool) => [tool.name, tool.annotations?.readOnlyHint]))).toEqual({
       create_call_draft: false,
+      create_demo_call_draft: false,
       update_call_draft: false,
       read_call_draft: true,
       get_call_status: true,

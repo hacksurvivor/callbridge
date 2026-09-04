@@ -43,6 +43,13 @@ The user never configures Twilio, OpenAI credentials, calling countries, or API
 keys. CallBridge owns the provider infrastructure; each call still requires a
 fresh visible quote and exact human confirmation.
 
+For repeatable judging, CallBridge also provides **Aurora Demo Hotel**, an
+explicitly fictional automated test desk reached through the real phone
+network. Judges can ask original questions. The recipient answers only from a
+versioned server-owned fact sheet, says when information is unavailable, and
+cannot book or take payment. This proves the same general phone-inquiry product
+without repeatedly disturbing a real business.
+
 ## Why This Matters
 
 CallBridge makes agents useful beyond websites without hiding consequential
@@ -97,8 +104,11 @@ external effects, candidate commits, deployments, and every real call.
 
 ## Key Features
 
-- **Five focused WebMCP tools:** create draft, update draft, read draft, read call
+- **Five general WebMCP tools:** create draft, update draft, read draft, read call
   status, and read call result.
+- **One controlled demo creator:** `create_demo_call_draft` supplies the private
+  recipient, fixed authority, one-attempt limit, and a one-time challenge credit
+  while letting the judge author the questions.
 - **Human-only execution:** WebMCP cannot confirm, dispatch, pay, book, cancel, or
   send messages.
 - **Revision-bound consent:** any material change invalidates the previous
@@ -118,7 +128,8 @@ external effects, candidate commits, deployments, and every real call.
 
 ## Architecture
 
-1. **ChatGPT in-app browser** invokes five tools registered through
+1. **ChatGPT in-app browser** invokes five general tools plus one controlled
+   demo creator registered through
    `document.modelContext.registerTool` on the CallBridge page.
 2. **React/Vite** renders the shared human-agent workspace, confirmation boundary,
    live Activity, and evidence-bound result.
@@ -130,8 +141,9 @@ external effects, candidate commits, deployments, and every real call.
    projection.
 5. **Cloudflare Worker** owns the bounded realtime call session and signed result
    callbacks.
-6. **Twilio Voice Media Streams** connects the phone network to **OpenAI
-   Realtime**.
+6. **Twilio Voice Media Streams** connects the calling agent to **OpenAI
+   Realtime**. A separate Twilio ConversationRelay route powers the controlled
+   facts-backed AI recipient; the two agents communicate over a real PSTN call.
 
 The browser registers tools and renders state. Convex owns authority. The worker
 handles temporary live audio. Only the webpage can confirm or stop a call.
@@ -140,8 +152,9 @@ handles temporary live audio. Only the webpage can confirm or stop a call.
 
 1. Open the public demo in ChatGPT's in-app browser.
 2. Choose **Continue with ChatGPT**. No provider account or API key is required.
-3. Ask ChatGPT: “Call this hotel and ask whether I can arrive after midnight.
-   Do not book anything or accept a fee.”
+3. Ask ChatGPT: “Use the controlled demo hotel. Ask whether I can arrive after
+   midnight, when breakfast is served, and whether renovation noise is
+   scheduled. Do not book anything or accept a fee.”
 4. Observe ChatGPT create the complete structured call plan through WebMCP.
 5. Review the visible destination, questions, context, languages, authority, and
    price. The call is not placed yet.
@@ -214,10 +227,11 @@ candidate passes both final canaries.
 - **App Status (28252):** Existing.
 - **Existing-project update (28253):** CallBridge began as a mobile-first
   call-avoidance prototype before the challenge. During the submission period we
-  built the web-first WebMCP application: five authenticated task tools, visible
-  exact-revision human confirmation, generalized inquiry contracts,
-  evidence-bound results, ChatGPT sign-in, responsive judge onboarding, and
-  release/test hardening. The historical mobile work and challenge additions
+  built the web-first WebMCP application: five authenticated general task tools,
+  one controlled-recipient demo creator, visible exact-revision human
+  confirmation, generalized inquiry contracts, evidence-bound results, ChatGPT
+  sign-in, responsive judge onboarding, and release/test hardening. The
+  historical mobile work and challenge additions
   remain distinguishable in the repository history and documentation.
 - **Live URL (28254):** https://avoider-3000.moloman.chatgpt.site/
 - **Private testing instructions (28255):** Use Continue with ChatGPT. No Twilio,
@@ -237,7 +251,7 @@ candidate passes both final canaries.
 
 Verified on the local candidate:
 
-- 161 automated backend, web, and telephony tests pass.
+- 324 automated backend, web, and telephony tests pass.
 - Backend and worker TypeScript checks pass.
 - Web and ChatGPT Site production builds pass.
 - Desktop and mobile browser acceptance pass for draft, confirmation, Activity,
@@ -248,7 +262,6 @@ Verified on the local candidate:
 
 Release gates still required before submission:
 
-- explicitly approved candidate commit and push;
 - deployment of that exact commit to the public Site and backend/worker;
 - authenticated target-browser WebMCP rehearsal on the deployed candidate;
 - two separately confirmed unchanged canary calls with no repeated resolved

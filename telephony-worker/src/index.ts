@@ -29,8 +29,17 @@ import {
   type TwilioVoiceQuote,
 } from "./internationalCalling";
 import { ensureTwilioLowRiskDialingPermission } from "./twilioDialingPermissions";
+import {
+  DemoHotelRecipient,
+  cancelDemoHotelAdmission,
+  demoHotelHealth,
+  demoHotelSessionPath,
+  handleDemoHotelVoiceWebhook,
+  reserveDemoHotelAdmission,
+  type DemoHotelEnv,
+} from "./demoHotelRecipient.js";
 
-type Env = {
+type Env = DemoHotelEnv & {
   CALL_SESSIONS: DurableObjectNamespace<CallSession>;
   EXTERNAL_EFFECTS_ENABLED: string;
   OPENAI_API_KEY: string;
@@ -205,6 +214,7 @@ async function dispatch(request: Request, env: Env): Promise<Response> {
     return json({ creationState: "definitely_not_created", error: "idempotency_key_mismatch" }, 400);
   }
   const destination = input.contract.destination.e164PhoneNumber;
+  const usesControlledDemoRecipient = env.DEMO_HOTEL_ENABLED === "true" && destination === env.DEMO_HOTEL_NUMBER;
   let quote: TwilioVoiceQuote;
   try {
     quote = await quoteCall(env, destination, input.contract.policy.maxConnectedSeconds);
@@ -239,6 +249,18 @@ async function dispatch(request: Request, env: Env): Promise<Response> {
     return json({ creationState: "definitely_not_created", error: error instanceof Error ? error.message : "dialing_permission_failed" }, 422);
   }
 
+  if (usesControlledDemoRecipient) {
+    const admission = await reserveDemoHotelAdmission({
+      env,
+      taskId: input.taskId,
+      attemptId: input.attemptId,
+      expectedTo: destination,
+    });
+    if (!admission.accepted) {
+      return json({ creationState: "definitely_not_created", error: admission.error }, 409);
+    }
+  }
+
   const origin = new URL(request.url).origin.replace(/^http/, "ws");
   const streamUrl = `${origin}${mediaStreamPath(input.dispatchIdempotencyKey, configured.streamToken)}`;
   const twiml = `<?xml version="1.0" encoding="UTF-8"?><Response><Connect><Stream url="${escapeXml(streamUrl)}" /></Connect></Response>`;
@@ -249,6 +271,7 @@ async function dispatch(request: Request, env: Env): Promise<Response> {
     return json({ creationState: "accepted", externalCallId: callSid, externalSessionId: callSid, quote, dialingPermission }, 201);
   } catch (error) {
     if (error instanceof ProviderRejectedBeforeCreation) {
+      if (usesControlledDemoRecipient) await cancelDemoHotelAdmission(env, input.taskId, input.attemptId);
       await session.recordDefinitelyNotCreated();
       return json({ creationState: "definitely_not_created", error: error.message }, 422);
     }
@@ -279,6 +302,16 @@ export default {
     }
     if (request.method === "POST" && url.pathname === "/pricing-quote") return await pricingQuote(request, env);
     if (request.method === "POST" && url.pathname === "/dispatch") return await dispatch(request, env);
+    if (request.method === "POST" && url.pathname === "/demo-hotel/voice") return await handleDemoHotelVoiceWebhook(request, env);
+    if (request.method === "GET" && url.pathname === "/internal/demo-hotel/health") {
+      if (!authorized(request, env.DISPATCH_API_KEY)) return json({ error: "unauthorized" }, 401);
+      return await demoHotelHealth(env);
+    }
+    const demoHotelSession = demoHotelSessionPath(url.pathname);
+    if (request.method === "GET" && demoHotelSession && request.headers.get("upgrade")?.toLowerCase() === "websocket") {
+      const object = env.DEMO_HOTEL_RECIPIENT.get(env.DEMO_HOTEL_RECIPIENT.idFromName("aurora-demo-hotel-v1"));
+      return await object.fetch(new Request(`${url.origin}/session/${encodeURIComponent(demoHotelSession.callSid)}/${encodeURIComponent(demoHotelSession.nonce)}`, request));
+    }
     const mediaStream = parseMediaStreamPath(url.pathname);
     if (request.method === "GET" && mediaStream && request.headers.get("upgrade")?.toLowerCase() === "websocket") {
       return await env.CALL_SESSIONS.get(env.CALL_SESSIONS.idFromName(mediaStream.dispatchId)).fetch(request);
@@ -286,6 +319,8 @@ export default {
     return new Response("Not found", { status: 404 });
   },
 };
+
+export { DemoHotelRecipient };
 
 export class CallSession extends DurableObject<Env> {
   private twilio?: WebSocket;

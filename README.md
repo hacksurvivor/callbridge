@@ -10,7 +10,7 @@ then places one disclosed multilingual call and returns an evidence-bound answer
 ## WebMCP web app
 
 `web/` is the primary CallBridge surface. ChatGPT can use five stable
-page tools to create, replace, read, monitor, and retrieve the result of a
+general page tools to create, replace, read, monitor, and retrieve the result of a
 structured inquiry for any supported destination or service. The inquiry
 itself is data: objective, ordered questions, private background, shareable
 facts, languages, spending ceiling, information-only policy, and an optional
@@ -35,7 +35,11 @@ stops in `creation_uncertain` until an internal provider lookup proves that the
 call exists or definitely does not. Only the latter releases the reserved call
 credit; neither outcome creates a second attempt.
 
-The hackathon submission deliberately ships the five call tools as one static,
+The hackathon submission adds `create_demo_call_draft`, a sixth server-owned
+entry point for the controlled Aurora Demo Hotel recipient. It lets a judge ask
+original questions while CallBridge supplies the private destination, fixed
+information-only authority, one-attempt limit, and a one-time challenge credit.
+The five general tools and this controlled creator ship as one static,
 artifact-free catalog. Convex remains authoritative for lifecycle permissions,
 so stale or invalid mutation attempts fail closed. Dynamic lifecycle removal was
 tested at the unit boundary but is not part of the candidate because the exact

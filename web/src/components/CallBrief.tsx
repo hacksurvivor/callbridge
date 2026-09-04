@@ -104,6 +104,11 @@ export function CallBrief({
 }: CallBriefProps) {
   const { contract, revision } = snapshot;
   const presentation = planStateCopy(status);
+  const controlledDemo = snapshot.recipientKind === "controlled_demo";
+  const editable = presentation.editable && !controlledDemo;
+  const destinationDetail = controlledDemo
+    ? "Private demo line · automated test desk"
+    : maskPhoneNumber(contract.destination.e164PhoneNumber);
   const [editing, setEditing] = useState(false);
   const [reviewing, setReviewing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -128,10 +133,10 @@ export function CallBrief({
   }, [contract, revision]);
 
   useEffect(() => {
-    if (presentation.editable) return;
+    if (editable) return;
     setEditing(false);
     setReviewing(false);
-  }, [presentation.editable]);
+  }, [editable]);
 
   useEffect(() => {
     if (!reviewing || !presentation.editable) return;
@@ -181,7 +186,7 @@ export function CallBrief({
               state={approvalState}
               title={`Place one call to ${contract.destination.displayName}?`}
               subtitle={`Draft v${revision} · ${contract.questions.length} questions · no automatic retry`}
-              command={`${maskPhoneNumber(contract.destination.e164PhoneNumber)} · ${languageName(contract.languages.call)} · information only`}
+              command={`${destinationDetail} · ${languageName(contract.languages.call)} · information only`}
               denyLabel="Go back"
               allowOnceLabel="Confirm one call"
               onDeny={() => setReviewing(false)}
@@ -196,7 +201,7 @@ export function CallBrief({
               <span className="hotel-icon"><DestinationIcon /></span>
               <div className="destination-name">
                 <strong>{contract.destination.displayName}</strong>
-                <span>{maskPhoneNumber(contract.destination.e164PhoneNumber)} · {languageName(contract.languages.call)}</span>
+                <span>{destinationDetail} · {languageName(contract.languages.call)}</span>
               </div>
               <span className="verified"><span className="status-dot" />Destination verified</span>
             </div>
@@ -255,7 +260,7 @@ export function CallBrief({
           <div className="brief-footer">
             <p className="approval-copy">{presentation.footerDetail(revision)}</p>
             <div className="brief-actions">
-              {presentation.editable ? <button className="button secondary" type="button" onClick={() => { setReviewing(false); setEditing(true); }}>Edit</button> : null}
+              {editable ? <button className="button secondary" type="button" onClick={() => { setReviewing(false); setEditing(true); }}>Edit</button> : null}
               <button className={presentation.editable ? "button primary" : "button secondary"} type="button" disabled={presentation.editable && confirmationDisabled} onClick={() => setReviewing((value) => !value)}>{reviewing ? "Close" : presentation.editable ? "Review and confirm" : "View details"}</button>
             </div>
           </div>

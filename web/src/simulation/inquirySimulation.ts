@@ -71,6 +71,7 @@ function makeSnapshot(
     revision,
     executionRevision,
     contract,
+    recipientKind: null,
     confirmation: {
       state: "ready",
       intentId: "simulation_intent",
@@ -586,6 +587,28 @@ export const simulationInquiryClient: InquiryToolClient = {
     }];
     publish(created);
     return created;
+  },
+  async createDemoCallDraft(input) {
+    return this.createCallDraft({
+      schemaVersion: 1,
+      idempotencyKey: input.idempotencyKey,
+      contract: {
+        ...APPROVED_INQUIRY_FIXTURE,
+        destination: {
+          displayName: "Aurora Demo Hotel · Controlled demo recipient",
+          e164PhoneNumber: "+10000000000",
+          countryCode: "US",
+        },
+        objective: input.objective,
+        questions: input.questions,
+        languages: { call: "en-US", result: input.resultLanguage ?? "en" },
+        context: {
+          shareableFacts: input.shareableContext
+            ? [{ id: "judge-context", label: "Context from the caller", value: input.shareableContext }]
+            : [],
+        },
+      },
+    }, new AbortController().signal);
   },
   async updateCallDraft(input) {
     if (input.schemaVersion !== 1) throw { code: "INVALID_INPUT" };

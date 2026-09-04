@@ -3,6 +3,7 @@ import {
   inquiryToolInputSchemas,
   toInquiryWebMcpError,
   type CreateInquiryDraftInput,
+  type CreateDemoInquiryDraftInput,
   type GetInquiryResultInput,
   type GetInquiryResultOutput,
   type GetInquiryStatusInput,
@@ -19,6 +20,7 @@ import type { WebMcpModelContext, WebMcpTool } from "./types.js";
 
 export type InquiryToolClient = {
   createCallDraft(input: CreateInquiryDraftInput, signal: AbortSignal): Promise<InquiryTaskSnapshot>;
+  createDemoCallDraft(input: CreateDemoInquiryDraftInput, signal: AbortSignal): Promise<InquiryTaskSnapshot>;
   updateCallDraft(input: UpdateInquiryDraftInput, signal: AbortSignal): Promise<UpdateInquiryDraftOutput>;
   readCallDraft(input: ReadInquiryDraftInput, signal: AbortSignal): Promise<InquiryTaskSnapshot>;
   getCallStatus(input: GetInquiryStatusInput, signal: AbortSignal): Promise<GetInquiryStatusOutput>;
@@ -31,8 +33,8 @@ export type InquiryToolPhase = "none" | "no_task" | "editable" | "running" | "te
 
 const TOOL_NAMES_BY_PHASE: Readonly<Record<InquiryToolPhase, readonly InquiryToolName[]>> = {
   none: [],
-  no_task: ["create_call_draft"],
-  editable: ["create_call_draft", "update_call_draft", "read_call_draft"],
+  no_task: ["create_call_draft", "create_demo_call_draft"],
+  editable: ["create_call_draft", "create_demo_call_draft", "update_call_draft", "read_call_draft"],
   running: ["read_call_draft", "get_call_status"],
   terminal: ["read_call_draft", "get_call_status", "get_call_result"],
 };
@@ -68,6 +70,14 @@ export function callBridgeWebMcpTools(
       inputSchema: inquiryToolInputSchemas.create_call_draft,
       annotations: { readOnlyHint: false },
       execute: (input, options) => executeSafely(() => client.createCallDraft(input as CreateInquiryDraftInput, executionSignal(options))),
+    },
+    {
+      name: "create_demo_call_draft",
+      title: "Create a controlled live demo call",
+      description: "Create a judge-safe inquiry draft for Aurora Demo Hotel, an automated controlled recipient reached through the real phone network. Ask original information-only questions; CallBridge supplies the private destination, policy, disclosure, one-attempt limit, and demo credit. This never confirms or starts a call.",
+      inputSchema: inquiryToolInputSchemas.create_demo_call_draft,
+      annotations: { readOnlyHint: false },
+      execute: (input, options) => executeSafely(() => client.createDemoCallDraft(input as CreateDemoInquiryDraftInput, executionSignal(options))),
     },
     {
       name: "update_call_draft",

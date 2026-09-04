@@ -8,6 +8,7 @@ import {
 } from "../../../shared/inquiryContracts.js";
 import type {
   CreateInquiryDraftInput,
+  CreateDemoInquiryDraftInput,
   GetInquiryResultOutput,
   GetInquiryStatusOutput,
   InquiryActivityEvent,
@@ -21,6 +22,7 @@ import {
 import type { InquiryToolClient } from "../webmcp/registerTools.js";
 
 type CreateDraftArgs = { idempotencyKey: string; contract: unknown };
+type CreateDemoDraftArgs = Omit<CreateDemoInquiryDraftInput, "schemaVersion">;
 type UpdateDraftArgs = { taskId: string; expectedRevision: number; contract: unknown };
 type ReadDraftArgs = { taskId: string };
 type CreateConfirmationIntentArgs = {
@@ -64,6 +66,7 @@ type CompleteControlledFixtureAuthorizationArgs = {
 };
 type AttachControlledFixtureEvidenceArgs = { taskId: string; idempotencyKey: string };
 const createDraftRef = makeFunctionReference<"mutation", CreateDraftArgs, InquiryTaskSnapshot>("inquiries:createDraft");
+const createDemoDraftRef = makeFunctionReference<"mutation", CreateDemoDraftArgs, InquiryTaskSnapshot>("inquiries:createDemoDraft");
 const updateDraftRef = makeFunctionReference<"mutation", UpdateDraftArgs, UpdateInquiryDraftOutput>("inquiries:updateDraft");
 const readDraftRef = makeFunctionReference<"query", ReadDraftArgs, InquiryTaskSnapshot>("inquiries:readDraft");
 const listDraftsRef = makeFunctionReference<"query", Record<string, never>, InquiryTaskSnapshot[]>("inquiries:listMine");
@@ -121,6 +124,20 @@ export function createConvexInquiryClient(input: {
       const result = await input.convex.mutation(createDraftRef, {
         idempotencyKey: args.idempotencyKey,
         contract,
+      });
+      assertNotAborted(signal);
+      acceptDraft(result);
+      return result;
+    },
+    async createDemoCallDraft(args: CreateDemoInquiryDraftInput, signal) {
+      assertSchemaVersion(args.schemaVersion);
+      assertNotAborted(signal);
+      const result = await input.convex.mutation(createDemoDraftRef, {
+        idempotencyKey: args.idempotencyKey,
+        objective: args.objective,
+        questions: args.questions,
+        ...(args.shareableContext === undefined ? {} : { shareableContext: args.shareableContext }),
+        ...(args.resultLanguage === undefined ? {} : { resultLanguage: args.resultLanguage }),
       });
       assertNotAborted(signal);
       acceptDraft(result);

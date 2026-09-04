@@ -15,6 +15,7 @@ import type {
 
 export const INQUIRY_TOOL_NAMES = [
   "create_call_draft",
+  "create_demo_call_draft",
   "update_call_draft",
   "read_call_draft",
   "get_call_status",
@@ -27,6 +28,15 @@ export type CreateInquiryDraftInput = {
   schemaVersion: typeof INQUIRY_CONTRACT_SCHEMA_VERSION;
   idempotencyKey: string;
   contract: InquiryCallContract;
+};
+
+export type CreateDemoInquiryDraftInput = {
+  schemaVersion: typeof INQUIRY_CONTRACT_SCHEMA_VERSION;
+  idempotencyKey: string;
+  objective: string;
+  questions: Array<{ id: string; prompt: string; required: boolean }>;
+  shareableContext?: string;
+  resultLanguage?: string;
 };
 
 export type UpdateInquiryDraftInput = {
@@ -193,6 +203,7 @@ const INTERNAL_ERROR_MAP = {
   PRICING_DURATION_MISMATCH: "REVISION_CONFLICT",
   PRICING_CURRENCY_MISMATCH: "POLICY_DENIED",
   DESTINATION_COUNTRY_MISMATCH: "POLICY_DENIED",
+  DEMO_RECIPIENT_UNAVAILABLE: "RATE_LIMITED",
   HIGH_RISK_DESTINATION_TYPE: "POLICY_DENIED",
   COST_CEILING_EXCEEDED: "POLICY_DENIED",
   RECIPIENT_OPTED_OUT: "RECIPIENT_OPTED_OUT",
@@ -384,6 +395,19 @@ export const inquiryToolInputSchemas = {
       schemaVersion,
       idempotencyKey: { type: "string", minLength: 8, maxLength: 200 },
       contract: inquiryContractJsonSchema,
+    },
+  },
+  create_demo_call_draft: {
+    type: "object",
+    additionalProperties: false,
+    required: ["schemaVersion", "idempotencyKey", "objective", "questions"],
+    properties: {
+      schemaVersion,
+      idempotencyKey: { type: "string", minLength: 8, maxLength: 200 },
+      objective: boundedText(1_000),
+      questions: { type: "array", minItems: 1, maxItems: 20, items: questionSchema },
+      shareableContext: boundedText(1_000),
+      resultLanguage: languageTag,
     },
   },
   update_call_draft: {

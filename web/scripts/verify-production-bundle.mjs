@@ -17,6 +17,7 @@ const bundle = filesUnder(dist)
 
 const requiredTools = [
   "create_call_draft",
+  "create_demo_call_draft",
   "update_call_draft",
   "read_call_draft",
   "get_call_status",
@@ -37,4 +38,4 @@ for (const value of forbiddenSubmissionSurface) {
   if (bundle.includes(value)) throw new Error(`Production bundle still contains forbidden submission surface: ${value}.`);
 }
 
-console.log("Production bundle exposes the five call tools and contains no artifact submission surface.");
+console.log("Production bundle exposes five general call tools plus the controlled demo creator and contains no artifact submission surface.");
