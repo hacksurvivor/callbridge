@@ -3,13 +3,22 @@
 The product boundary is a user-authored, information-only phone inquiry. The
 hotel flow is one repeatable demo fixture, not a vertical restriction.
 
-## 2026-09-02 submission candidate checkpoint
+## 2026-09-03 submission candidate checkpoint
 
 Current source checkpoint (dirty worktree; not committed or deployed):
 
-- `npm run verify:submission` passed: 65 focused inquiry backend tests, 18 web
+- `npm run verify:submission` passed: 65 focused inquiry backend tests, 20 web
   tests, 76 telephony-worker tests, backend and worker TypeScript builds, the
   production web build, and artifact-free production-bundle inspection.
+- The ChatGPT Site wrapper passed its 2 session-token tests and complete
+  five-stage production build. Its public entry exposes **Continue with ChatGPT**
+  and reaches the official OpenAI OAuth endpoint; the email fallback remains
+  separate.
+- Local browser QA passed at 375, 768, and 1280 CSS pixels with no horizontal
+  overflow or application console error. The final confirmation is a separate
+  webpage-only step, and the result fixture exposes all answers, source excerpts,
+  connected duration, provider cost, disclosure state, safety state, and terminal
+  outcome.
 - Full-history and current-worktree gitleaks scans passed with the checked-in
   narrow configuration for deterministic non-secret fixtures and ignored local
   Convex runtime state.
@@ -28,14 +37,14 @@ Current source checkpoint (dirty worktree; not committed or deployed):
   exact suites by explicit test list; it does not claim the root command passed.
 - Candidate verification fails when the production browser and Convex client
   IDs diverge, when their Convex URLs diverge, or when the callback is not
-  exactly `https://callbridge-web.pages.dev/callback`. This proves internal
-  configuration consistency only; a WorkOS environment/account check must still
-  establish that the reviewed client belongs to an isolated Production app.
+  exactly `https://callbridge-web.pages.dev/callback`. This protects the email
+  fallback configuration; the primary judge path uses ChatGPT sign-in and the
+  versioned CallBridge token bridge.
 
 This is code-gate evidence only. Promotion still requires a committed/deployed
-candidate, WorkOS Production identity isolation, a target-browser smoke on that
-deployment, two consecutive separately confirmed post-fix calls, a clean-clone
-reproduction, and final public video/link verification.
+candidate, an authenticated target-browser WebMCP smoke on that deployment, two
+consecutive separately confirmed post-fix calls, a clean-clone reproduction, and
+final public video/link verification.
 
 ## Executable scenario matrix
 

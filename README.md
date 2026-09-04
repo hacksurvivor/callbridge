@@ -54,8 +54,12 @@ audio, credentials, private background, and hidden reasoning.
 ## Submission status
 
 - Candidate code gate: `npm run verify:submission`
-- Final external gates: WorkOS Production judge isolation, target-browser smoke,
-  two consecutive post-fix controlled calls, clean public clone, and public video/link verification
+- Primary judge entry: [`avoider-3000.moloman.chatgpt.site`](https://avoider-3000.moloman.chatgpt.site)
+  with **Continue with ChatGPT**; judges do not configure Twilio, OpenAI keys, or a calling provider
+- Final external gates: deploy this exact candidate to the public judge entry,
+  complete one target-browser WebMCP rehearsal, pass two consecutive post-fix
+  controlled calls, reproduce from a clean public clone, and verify the public
+  video and submission links
 - Root `npm test` is not used as the submission gate because it also discovers two
   unshipped historical mobile suites whose local Expo config is unavailable; this
   limitation is disclosed rather than hidden
@@ -73,7 +77,8 @@ audio, credentials, private background, and hidden reasoning.
   instructions or an intercom code
 - Hard-coded `gather_options_only` permissions; booking, payment, accepting
   terms, cancellation, and any irreversible commitment are structurally forbidden
-- WorkOS AuthKit identity port and fail-closed Convex JWT configuration
+- ChatGPT sign-in with short-lived, audience-bound Convex JWTs; WorkOS AuthKit
+  remains the email fallback
 - Convex schema, authenticated queries/mutations, realtime indexes, and an
   internal-only confirmed-task reservation gate
 - HMAC-verified Lemon Squeezy HTTP webhook and idempotent entitlement store
@@ -90,10 +95,13 @@ audio, credentials, private background, and hidden reasoning.
   Twilio bidirectional Media Streams and OpenAI Realtime. Its own effects flag
   also defaults to false.
 
-The public WebMCP URL is
+The primary judge URL is
+[`avoider-3000.moloman.chatgpt.site`](https://avoider-3000.moloman.chatgpt.site),
+which starts with **Continue with ChatGPT** and then loads the same authenticated
+WebMCP workspace. The email fallback remains available at
 [`callbridge-web.pages.dev`](https://callbridge-web.pages.dev). Final candidate
-promotion requires that this deployment, the Convex deployment, and the dedicated
-WorkOS Production application are bound to the same reviewed build. The current
+promotion requires that both web entries and the Convex deployment are bound to
+the same reviewed source. The current
 Twilio/OpenAI Realtime bridge is available at
 [`callbridge-telephony.office-sergey-moloman.workers.dev`](https://callbridge-telephony.office-sergey-moloman.workers.dev/health).
 A previous controlled Romanian PSTN canary completed successfully; it predates this

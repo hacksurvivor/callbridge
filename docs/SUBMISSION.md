@@ -28,14 +28,20 @@ bound to the exact execution revision and provider quote.
 
 ## Three-minute demo
 
-1. Ask ChatGPT: “Call this Japanese hotel. Ask whether I can arrive after
+1. Open the public judge URL and choose **Continue with ChatGPT**.
+2. Ask ChatGPT: “Call this Japanese hotel. Ask whether I can arrive after
    midnight. Do not book anything or accept a fee.”
-2. Show WebMCP creating the complete visible brief.
-3. Review destination, questions, shareable context, authority, and ceiling;
+3. Show WebMCP creating the complete visible brief.
+4. Review destination, questions, shareable context, authority, and ceiling;
    click **Confirm call** on the webpage.
-4. Show one disclosed multilingual call and factual Activity.
-5. Show the translated answer and proof receipt; ask ChatGPT to explain it.
-6. Close with one non-live Moldova, India, or Thailand example using the same contract.
+5. Show one disclosed multilingual call and factual Activity.
+6. Show the translated answer and proof receipt; ask ChatGPT to explain it.
+7. Close with the eight-market fixture matrix to prove that the hotel is a demo,
+   not a product boundary.
+
+The public judge flow requires no Twilio account, provider credentials, API key,
+or country-permission setup. CallBridge owns that infrastructure. Each judge
+still reviews a fresh price and confirms one exact revision on the webpage.
 
 ## Proof boundaries
 
@@ -68,14 +74,15 @@ is auditable.
 ## Candidate acceptance
 
 Run `npm run verify:submission` with the production public build variables. The
-gate rejects a browser/Convex WorkOS client mismatch, a Convex deployment
-mismatch, or any callback other than the exact production callback. This is
-configuration-consistency proof, not proof that WorkOS provisioned the client in
-an isolated Production environment. A
-candidate is not promoted until the code gate passes, isolated WorkOS Production
-judge identities are rehearsed, the production URL is checked in ChatGPT's target
-browser, and two separately confirmed post-fix controlled calls pass without
-repetition, manual repair, or a hidden second attempt.
+gate rejects an email-fallback browser/Convex WorkOS client mismatch, a Convex
+deployment mismatch, or any callback other than the exact production callback.
+The primary judge entry uses ChatGPT sign-in and exchanges the authenticated
+ChatGPT identity for a five-minute, audience-bound Convex token. A candidate is
+not promoted until both identity paths build, the public ChatGPT sign-in reaches
+the official OpenAI authorization endpoint, the authenticated workspace is
+checked in ChatGPT's target browser, and two separately confirmed post-fix
+controlled calls pass without repetition, manual repair, or a hidden second
+attempt.
 
 The final public repository, live deployment, evidence, and video must all identify
 the same candidate commit/build. Any runtime change invalidates the live proof.
