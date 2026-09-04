@@ -10,6 +10,7 @@
     "eval:live": "node evals/run-live-evals.mjs",
     "eval:verify-manifest": "node evals/run-live-evals.mjs --verify",
     "deploy": "wrangler deploy",
+    "deploy:production": "wrangler deploy --var EXTERNAL_EFFECTS_ENABLED:true --var DEMO_HOTEL_ENABLED:true",
     "deploy:dry": "wrangler deploy --dry-run"
   },
   "devDependencies": {

@@ -21,6 +21,7 @@ const {
   scrubStoredRealtimeSnapshot,
   shouldAnalyzeProviderTranscript,
   terminalReasonForSocketClose,
+  terminalReasonForTwilioStatus,
 } = await import("../src/index");
 
 const request: InquiryDispatchRequest = {
@@ -39,6 +40,7 @@ function env(overrides: Record<string, unknown> = {}) {
     TWILIO_ACCOUNT_SID: "AC00000000000000000000000000000000",
     TWILIO_API_KEY: "SK00000000000000000000000000000001",
     TWILIO_API_KEY_SECRET: "voice-secret",
+    TWILIO_AUTH_TOKEN: "twilio-auth-token",
     TWILIO_CONTROL_API_KEY: "SK00000000000000000000000000000002",
     TWILIO_CONTROL_API_KEY_SECRET: "control-secret",
     TWILIO_FROM_NUMBER: "+12065550100",
@@ -52,11 +54,31 @@ function env(overrides: Record<string, unknown> = {}) {
         })),
         beginCallCreation: vi.fn(async () => undefined),
         recordCallSid: vi.fn(async () => undefined),
+        recordProviderStatus: vi.fn(async () => true),
+        reconcileProviderStatus: vi.fn(async () => ({ reconciled: true, status: "busy", terminalReason: "no_answer" as const })),
         recordDefinitelyNotCreated: vi.fn(async () => undefined),
       })),
     },
     ...overrides,
   };
+}
+
+async function twilioSignature(url: string, form: URLSearchParams, token: string): Promise<string> {
+  let payload = url;
+  for (const key of Array.from(new Set(form.keys())).sort()) {
+    for (const value of form.getAll(key).sort()) payload += `${key}${value}`;
+  }
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(token),
+    { name: "HMAC", hash: "SHA-1" },
+    false,
+    ["sign"],
+  );
+  const bytes = new Uint8Array(await crypto.subtle.sign("HMAC", cryptoKey, new TextEncoder().encode(payload)));
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
 }
 
 function pricingResponse(isoCountry = "JP") {
@@ -120,6 +142,59 @@ describe("telephony worker routes", () => {
   it("does not misclassify an OpenAI socket shutdown as a recipient hangup", () => {
     expect(terminalReasonForSocketClose("openai")).toBe("provider_failure");
     expect(terminalReasonForSocketClose("twilio")).toBe("remote_hangup");
+  });
+
+  it("maps pre-connect Twilio terminal statuses without inventing a conversation", () => {
+    expect(terminalReasonForTwilioStatus("busy")).toBe("no_answer");
+    expect(terminalReasonForTwilioStatus("no-answer")).toBe("no_answer");
+    expect(terminalReasonForTwilioStatus("failed")).toBe("provider_failure");
+    expect(terminalReasonForTwilioStatus("completed")).toBe("remote_hangup");
+    expect(terminalReasonForTwilioStatus("ringing")).toBeNull();
+    expect(terminalReasonForTwilioStatus("in-progress")).toBeNull();
+  });
+
+  it("accepts a signed Twilio status callback and forwards it to the matching durable session", async () => {
+    const environment = env();
+    const session = environment.CALL_SESSIONS.get();
+    environment.CALL_SESSIONS.get = vi.fn(() => session);
+    const url = "https://worker.example/twilio/status/dispatch_route_1/stream-token";
+    const form = new URLSearchParams({
+      CallSid: "CA00000000000000000000000000000001",
+      CallStatus: "busy",
+    });
+    const signature = await twilioSignature(url, form, environment.TWILIO_AUTH_TOKEN);
+    const response = await worker.fetch(new Request(url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        "x-twilio-signature": signature,
+      },
+      body: form,
+    }), environment as never);
+
+    expect(response.status).toBe(204);
+    expect(environment.CALL_SESSIONS.idFromName).toHaveBeenCalledWith("dispatch_route_1");
+    expect(session.recordProviderStatus).toHaveBeenCalledWith({
+      streamToken: "stream-token",
+      callSid: "CA00000000000000000000000000000001",
+      status: "busy",
+    });
+  });
+
+  it("reconciles an accepted call through the authenticated internal route", async () => {
+    const environment = env();
+    const session = environment.CALL_SESSIONS.get();
+    environment.CALL_SESSIONS.get = vi.fn(() => session);
+    const response = await worker.fetch(new Request("https://worker.example/internal/reconcile-twilio-call", {
+      method: "POST",
+      headers: { authorization: "Bearer dispatch-secret", "content-type": "application/json" },
+      body: JSON.stringify({ dispatchIdempotencyKey: "dispatch_route_1" }),
+    }), environment as never);
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ reconciled: true, status: "busy", terminalReason: "no_answer" });
+    expect(environment.CALL_SESSIONS.idFromName).toHaveBeenCalledWith("dispatch_route_1");
+    expect(session.reconcileProviderStatus).toHaveBeenCalledOnce();
   });
 
   it("measures connected duration at terminal time instead of delayed result publication time", () => {
@@ -301,6 +376,7 @@ describe("telephony worker routes", () => {
 
   it("creates a query-free Twilio Media Stream URL", async () => {
     let createdTwiml = "";
+    let createdCallBody = new URLSearchParams();
     const fetchMock = vi.fn(async (resource: RequestInfo | URL, init?: RequestInit) => {
       const url = String(resource);
       if (url.includes("pricing.twilio.com")) return pricingResponse();
@@ -313,7 +389,8 @@ describe("telephony worker routes", () => {
         }), { status: 200 });
       }
       if (url.includes("Calls.json")) {
-        createdTwiml = new URLSearchParams(String(init?.body)).get("Twiml") ?? "";
+        createdCallBody = new URLSearchParams(String(init?.body));
+        createdTwiml = createdCallBody.get("Twiml") ?? "";
         return new Response(JSON.stringify({ sid: "CA00000000000000000000000000000001" }), { status: 201 });
       }
       throw new Error(`Unexpected fetch: ${url}`);
@@ -326,5 +403,8 @@ describe("telephony worker routes", () => {
     expect(createdTwiml).toContain("wss://worker.example/media-stream/dispatch_route_1/stream-token");
     expect(createdTwiml).not.toContain("/media-stream?");
     expect(createdTwiml).not.toContain("&amp;");
+    expect(createdCallBody.get("StatusCallback")).toBe("https://worker.example/twilio/status/dispatch_route_1/stream-token");
+    expect(createdCallBody.get("StatusCallbackMethod")).toBe("POST");
+    expect(createdCallBody.getAll("StatusCallbackEvent")).toEqual(["initiated", "ringing", "answered", "completed"]);
   });
 });

@@ -20,6 +20,8 @@
     "DEMO_HOTEL_MAX_DAILY_COST_MINOR_UNITS": "2000",
     "DEMO_HOTEL_MAX_RESERVED_COST_PER_CALL_MINOR_UNITS": "100",
     "DEMO_HOTEL_FACT_SHEET_REVISION": "aurora_demo_hotel_v1",
+    "DEMO_HOTEL_NUMBER": "+18636228973",
+    "DEMO_HOTEL_EXPECTED_FROM": "+16508897031",
     "CALLBACK_URL": "https://hardy-hedgehog-401.convex.site/webhooks/inquiry-worker"
   },
   "durable_objects": {

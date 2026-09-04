@@ -36,6 +36,7 @@ import {
   demoHotelSessionPath,
   handleDemoHotelVoiceWebhook,
   reserveDemoHotelAdmission,
+  validTwilioFormSignature,
   type DemoHotelEnv,
 } from "./demoHotelRecipient.js";
 
@@ -112,6 +113,13 @@ export function terminalReasonForSocketClose(channel: "twilio" | "openai"): Inqu
   return channel === "twilio" ? "remote_hangup" : "provider_failure";
 }
 
+export function terminalReasonForTwilioStatus(status: string): InquiryCallResult["terminalReason"] | null {
+  if (status === "busy" || status === "no-answer") return "no_answer";
+  if (status === "failed" || status === "canceled") return "provider_failure";
+  if (status === "completed") return "remote_hangup";
+  return null;
+}
+
 export function shouldAnalyzeProviderTranscript(providerTurns: readonly string[]): boolean {
   return providerTurns.some((turn) => turn.trim().length > 0);
 }
@@ -129,9 +137,17 @@ async function createTwilioCall(input: {
   env: Env;
   to: string;
   twiml: string;
+  statusCallbackUrl: string;
 }): Promise<string> {
   const endpoint = `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(input.env.TWILIO_ACCOUNT_SID)}/Calls.json`;
-  const body = new URLSearchParams({ To: input.to, From: input.env.TWILIO_FROM_NUMBER, Twiml: input.twiml });
+  const body = new URLSearchParams({
+    To: input.to,
+    From: input.env.TWILIO_FROM_NUMBER,
+    Twiml: input.twiml,
+    StatusCallback: input.statusCallbackUrl,
+    StatusCallbackMethod: "POST",
+  });
+  for (const event of ["initiated", "ringing", "answered", "completed"]) body.append("StatusCallbackEvent", event);
   const auth = btoa(`${input.env.TWILIO_API_KEY}:${input.env.TWILIO_API_KEY_SECRET}`);
   let response: Response;
   try {
@@ -264,9 +280,10 @@ async function dispatch(request: Request, env: Env): Promise<Response> {
   const origin = new URL(request.url).origin.replace(/^http/, "ws");
   const streamUrl = `${origin}${mediaStreamPath(input.dispatchIdempotencyKey, configured.streamToken)}`;
   const twiml = `<?xml version="1.0" encoding="UTF-8"?><Response><Connect><Stream url="${escapeXml(streamUrl)}" /></Connect></Response>`;
+  const statusCallbackUrl = `${new URL(request.url).origin}/twilio/status/${encodeURIComponent(input.dispatchIdempotencyKey)}/${encodeURIComponent(configured.streamToken)}`;
   await session.beginCallCreation();
   try {
-    const callSid = await createTwilioCall({ env, to: destination, twiml });
+    const callSid = await createTwilioCall({ env, to: destination, twiml, statusCallbackUrl });
     await session.recordCallSid(callSid);
     return json({ creationState: "accepted", externalCallId: callSid, externalSessionId: callSid, quote, dialingPermission }, 201);
   } catch (error) {
@@ -277,6 +294,43 @@ async function dispatch(request: Request, env: Env): Promise<Response> {
     }
     return json({ creationState: "creation_uncertain", error: "provider_creation_outcome_requires_reconciliation" }, 502);
   }
+}
+
+function parseTwilioStatusPath(pathname: string): { dispatchId: string; streamToken: string } | null {
+  const match = pathname.match(/^\/twilio\/status\/([^/]+)\/([^/]+)$/);
+  if (!match) return null;
+  try {
+    const dispatchId = decodeURIComponent(match[1]!);
+    const streamToken = decodeURIComponent(match[2]!);
+    return dispatchId && streamToken ? { dispatchId, streamToken } : null;
+  } catch {
+    return null;
+  }
+}
+
+async function handleTwilioStatusCallback(request: Request, env: Env, path: { dispatchId: string; streamToken: string }): Promise<Response> {
+  if (!env.TWILIO_AUTH_TOKEN) return new Response("Forbidden", { status: 403 });
+  const signature = request.headers.get("x-twilio-signature") ?? "";
+  const raw = await request.text();
+  const form = new URLSearchParams(raw);
+  if (!signature || !await validTwilioFormSignature({ url: request.url, form, authToken: env.TWILIO_AUTH_TOKEN, signature })) {
+    return new Response("Forbidden", { status: 403 });
+  }
+  const callSid = form.get("CallSid")?.trim() ?? "";
+  const status = form.get("CallStatus")?.trim().toLowerCase() ?? "";
+  if (!/^CA[0-9a-f]{32}$/i.test(callSid) || !status) return new Response("Bad Request", { status: 400 });
+  const session = env.CALL_SESSIONS.get(env.CALL_SESSIONS.idFromName(path.dispatchId));
+  const accepted = await session.recordProviderStatus({ streamToken: path.streamToken, callSid, status });
+  return new Response(null, { status: accepted ? 204 : 409 });
+}
+
+async function reconcileTwilioCall(request: Request, env: Env): Promise<Response> {
+  if (!authorized(request, env.DISPATCH_API_KEY)) return json({ error: "unauthorized" }, 401);
+  const input: { dispatchIdempotencyKey?: string } = await request.json<{ dispatchIdempotencyKey?: string }>().catch(() => ({}));
+  const dispatchId = input.dispatchIdempotencyKey?.trim() ?? "";
+  if (!dispatchId || dispatchId.length > 200) return json({ error: "invalid_dispatch_id" }, 400);
+  const session = env.CALL_SESSIONS.get(env.CALL_SESSIONS.idFromName(dispatchId));
+  return json(await session.reconcileProviderStatus());
 }
 
 export default {
@@ -303,6 +357,9 @@ export default {
     if (request.method === "POST" && url.pathname === "/pricing-quote") return await pricingQuote(request, env);
     if (request.method === "POST" && url.pathname === "/dispatch") return await dispatch(request, env);
     if (request.method === "POST" && url.pathname === "/demo-hotel/voice") return await handleDemoHotelVoiceWebhook(request, env);
+    if (request.method === "POST" && url.pathname === "/internal/reconcile-twilio-call") return await reconcileTwilioCall(request, env);
+    const twilioStatus = parseTwilioStatusPath(url.pathname);
+    if (request.method === "POST" && twilioStatus) return await handleTwilioStatusCallback(request, env, twilioStatus);
     if (request.method === "GET" && url.pathname === "/internal/demo-hotel/health") {
       if (!authorized(request, env.DISPATCH_API_KEY)) return json({ error: "unauthorized" }, 401);
       return await demoHotelHealth(env);
@@ -409,6 +466,35 @@ export class CallSession extends DurableObject<Env> {
     if (!session) throw new Error("Call session is not configured");
     if (session.callSid && session.callSid !== callSid) throw new Error("Call session already has a different SID");
     await this.ctx.storage.put("session", { ...session, callSid, creationState: "accepted" } satisfies StoredSession);
+  }
+
+  async recordProviderStatus(input: { streamToken: string; callSid: string; status: string }): Promise<boolean> {
+    const session = await this.ctx.storage.get<StoredSession>("session");
+    if (!session || input.streamToken !== session.streamToken || (session.callSid && input.callSid !== session.callSid)) return false;
+    const updated = {
+      ...session,
+      callSid: input.callSid,
+      creationState: "accepted" as const,
+    } satisfies StoredSession;
+    await this.ctx.storage.put("session", updated);
+    const terminalReason = terminalReasonForTwilioStatus(input.status);
+    if (terminalReason && !updated.terminalReason && !updated.completionDelivered) this.finish(updated, terminalReason);
+    return true;
+  }
+
+  async reconcileProviderStatus(): Promise<{ reconciled: boolean; status?: string; terminalReason?: InquiryCallResult["terminalReason"]; error?: string }> {
+    const session = await this.ctx.storage.get<StoredSession>("session");
+    if (!session?.callSid) return { reconciled: false, error: "call_sid_unavailable" };
+    const endpoint = `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(this.env.TWILIO_ACCOUNT_SID)}/Calls/${encodeURIComponent(session.callSid)}.json`;
+    const auth = btoa(`${this.env.TWILIO_API_KEY}:${this.env.TWILIO_API_KEY_SECRET}`);
+    const response = await fetch(endpoint, { headers: { authorization: `Basic ${auth}` } });
+    if (!response.ok) return { reconciled: false, error: `twilio_status_read_failed_${response.status}` };
+    const data: { status?: string } = await response.json<{ status?: string }>().catch(() => ({}));
+    const status = data.status?.trim().toLowerCase() ?? "";
+    if (!status) return { reconciled: false, error: "twilio_status_unavailable" };
+    const terminalReason = terminalReasonForTwilioStatus(status);
+    await this.recordProviderStatus({ streamToken: session.streamToken, callSid: session.callSid, status });
+    return terminalReason ? { reconciled: true, status, terminalReason } : { reconciled: false, status };
   }
 
   async recordDefinitelyNotCreated(): Promise<void> {
