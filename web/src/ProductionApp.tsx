@@ -16,6 +16,7 @@ import {
   listInquiryTasks,
   prepareInquiryConfirmation,
   readTaskIdFromLocation,
+  selectAutomaticRestoreTaskId,
   type PreparedConfirmationIntent,
 } from "./convex/inquiryClient.js";
 import {
@@ -113,13 +114,37 @@ export function LiveWorkspace() {
 
   useEffect(() => {
     let active = true;
+    const controller = new AbortController();
+    const requestedTaskId = readTaskIdFromLocation();
+    if (!requestedTaskId) setRestoreState("loading");
     void listInquiryTasks(convex).then((tasks) => {
-      if (active) setRecentTasks(tasks.map(recentTask));
+      if (!active) return;
+      setRecentTasks(tasks.map(recentTask));
+      const automaticTaskId = selectAutomaticRestoreTaskId(
+        tasks.map(({ taskId }) => taskId),
+        readTaskIdFromLocation(),
+      );
+      if (!automaticTaskId) {
+        if (!requestedTaskId) setRestoreState("idle");
+        return;
+      }
+      void toolClient.readCallDraft(
+        { schemaVersion: INQUIRY_CONTRACT_SCHEMA_VERSION, taskId: automaticTaskId },
+        controller.signal,
+      ).then(() => {
+        if (active) setRestoreState("idle");
+      }, () => {
+        if (active) setRestoreState("failed");
+      });
     }, () => {
       // The active task remains usable when history cannot be refreshed.
+      if (active && !requestedTaskId) setRestoreState("idle");
     });
-    return () => { active = false; };
-  }, [convex]);
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [convex, toolClient]);
 
   useEffect(() => {
     const taskId = readTaskIdFromLocation();

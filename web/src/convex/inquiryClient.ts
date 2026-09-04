@@ -100,6 +100,14 @@ export function readTaskIdFromLocation(location?: Location): string | null {
   return isPlausibleTaskId(candidate) ? candidate : null;
 }
 
+export function selectAutomaticRestoreTaskId(
+  taskIds: readonly string[],
+  locationTaskId: string | null,
+): string | null {
+  if (locationTaskId) return null;
+  return taskIds.find(isPlausibleTaskId) ?? null;
+}
+
 export function persistTaskIdInLocation(taskId: string): void {
   if (!isPlausibleTaskId(taskId)) return;
   const url = new URL(window.location.href);
