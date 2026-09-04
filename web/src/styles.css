@@ -1,4 +1,5 @@
-@import "tailwindcss";
+/* The Sites build runs from /sites, so pin utility scanning to this shared UI tree. */
+@import "tailwindcss" source(".");
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";

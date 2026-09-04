@@ -1,4 +1,5 @@
 import { sites } from '@openai/sites-vite-plugin';
+import tailwindcss from '@tailwindcss/vite';
 import { fileURLToPath } from 'node:url';
 import vinext from 'vinext';
 import { defineConfig } from 'vite';
@@ -59,6 +60,7 @@ export default defineConfig(async () => {
         : {}),
     },
     plugins: [
+      tailwindcss(),
       vinext(),
       sites(),
       cloudflare({
