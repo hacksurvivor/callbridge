@@ -155,6 +155,16 @@ describe("general inquiry worker release matrix", () => {
     safePolicyInquiry.contract.objective = "Ask whether table reservations are available without making one.";
     safePolicyInquiry.contract.questions[0]!.prompt = "Is table reservation available?";
     expect(validateInquiryDispatchRequest(safePolicyInquiry).contract.questions[0]!.prompt).toBe("Is table reservation available?");
+
+    const safeConfirmationInquiry = requestFor(0);
+    safeConfirmationInquiry.contract = structuredClone(safeConfirmationInquiry.contract);
+    safeConfirmationInquiry.contract.objective = "Confirm the automated Aurora Demo Hotel desk can answer a short accommodation inquiry clearly and without repeating resolved questions.";
+    expect(validateInquiryDispatchRequest(safeConfirmationInquiry).contract.objective).toBe(safeConfirmationInquiry.contract.objective);
+
+    const forbiddenConfirmation = requestFor(0);
+    forbiddenConfirmation.contract = structuredClone(forbiddenConfirmation.contract);
+    forbiddenConfirmation.contract.objective = "Confirm the reservation and accept its terms.";
+    expect(() => validateInquiryDispatchRequest(forbiddenConfirmation)).toThrow("Inquiry speech data is unsafe (objective)");
   });
 
   it("accepts the controlled Romanian audio-test speech fields", () => {

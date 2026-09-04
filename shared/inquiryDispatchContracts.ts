@@ -27,22 +27,23 @@ function containsSpeechControlInjection(value: string): boolean {
     /(?:^|\s)ignor(?:ă|a)(?=\s).{0,80}(?:regul|instrucțiun|prompt)/.test(normalized) ||
     /(?:^|\s)(?:dezvăluie|arată|repetă|tipărește)(?=\s).{0,60}(?:sistem|dezvoltator|intern)/.test(normalized) ||
     /(?:игнор|раскр|покаж|повтор|напечат).{0,80}(?:правил|инструкц|промпт|систем|секрет)/.test(normalized) ||
-    /(?:^|[.!?]\s+)(?:please\s+)?(?:book|reserve|cancel|pay|charge|purchase|buy|accept|agree|authorize|confirm)\b/.test(normalized) ||
+    /(?:^|[.!?]\s+)(?:please\s+)?(?:book|reserve|cancel|pay|charge|purchase|buy|accept|agree|authorize)\b/.test(normalized) ||
     /\bmake\s+(?:a|the|any)\s+(?:reservation|booking|payment|purchase|commitment)\b/.test(normalized)
   );
 }
 
-const SAFE_OBJECTIVE_START = /^(?:ask|collect|find out|clarify|inquire|learn|check|determine|understand|gather|get information)\b/i;
+const SAFE_OBJECTIVE_START = /^(?:ask|collect|find out|clarify|confirm|inquire|learn|check|determine|understand|gather|get information)\b/i;
 const SAFE_QUESTION_START = /^(?:who|what|when|where|why|how|which|until|is|are|am|do|does|did|can|could|may|might|will|would|should|has|have|had|must)\b/i;
 const SAFE_PLAYBOOK_START = /^(?:ask|clarify|deliver|disclose|thank|end|if|when|do not|never|confirm that|repeat the approved)\b/i;
-const FORBIDDEN_ACTION_WORD = /\b(?:book|reserve|cancel|pay|charge|purchase|buy|accept|agree|authorize|confirm|change|modify|redirect|release|order|schedule)\b/i;
+const FORBIDDEN_ACTION_WORD = /\b(?:book|reserve|cancel|pay|charge|purchase|buy|accept|agree|authorize|change|modify|redirect|release|order|schedule)\b/i;
+const FORBIDDEN_CONFIRMATION = /\bconfirm\b.{0,60}\b(?:booking|reservation|payment|purchase|charge|fee|terms?|commitment|order)\b/i;
 const ROMANIAN_SAFE_OBJECTIVE_START = /^(?:întreabă|află|clarifică|verifică|determină|înțelege|colectează|obține informații)(?=\s|$)/i;
 const ROMANIAN_SAFE_QUESTION_START = /^(?:cine|ce|când|unde|de ce|cum|care|până când|este|sunt|e|mă|în ce|ai|a fost|aveți|au|poți|puteți|poate|ar|va|trebuie)(?=\s|$)/i;
 const ROMANIAN_ACTION_REQUEST = /(?:^|[.!?,;:]\s*)(?:te rog\s+)?(?:rezervă|anulează|plătește|taxează|cumpără|acceptă|autorizează|confirmă|schimbă|modifică|redirecționează|eliberează|comandă|programează)|(?:poți|puteți|vreau să|aș dori să|apoi|și)\s+(?:rezerv(?:a|ă)|anula|plăti|taxa|cumpăr(?:a|ă)|accepta|autoriza|confirma|schimba|modifica|redirecționa|elibera|comanda|programa)/i;
 const RUSSIAN_SAFE_OBJECTIVE_START = /^(?:спрос|узна|уточн|провер|определ|поня|собер|получ)/i;
 const RUSSIAN_SAFE_QUESTION_START = /^(?:кто|что|когда|где|почему|как|какой|какая|какие|до когда|есть ли|является ли|можно ли|может ли|нужно ли|должен ли|должна ли|вы|ты)/i;
 const RUSSIAN_ACTION_REQUEST = /(?:^|[.!?,;:]\s*)(?:пожалуйста\s+)?(?:заброни|зарезервир|отмен|оплат|спиш|куп|прими|соглас|авториз|подтверд|измени|перенаправ|освобод|закаж|запланир)|(?:можно ли|можете|можешь|хочу|затем|потом|и)\s+(?:заброни|зарезервир|отмен|оплат|спис|куп|приня|соглас|авториз|подтверд|измен|перенаправ|освобод|заказ|запланир)/i;
-const ACTION_REQUEST = /(?:^|[.!?]\s+)(?:please\s+)?(?:book|reserve|cancel|pay|charge|purchase|buy|accept|agree|authorize|confirm|change|modify|redirect|release|order|schedule)\b|\b(?:ask|tell|have|instruct)\s+(?:them|the recipient|the provider|the business)\s+to\s+(?:book|reserve|cancel|pay|charge|purchase|buy|accept|agree|authorize|confirm|change|modify|redirect|release|order|schedule)\b|\b(?:can|could|would|will|should)\s+(?:you|i|we)\s+(?:book|reserve|cancel|pay|charge|purchase|buy|accept|agree|authorize|confirm|change|modify|redirect|release|order|schedule)\b|\bmake\s+(?:a|the|any)\s+(?:reservation|booking|payment|purchase|commitment|change)\b/i;
+const ACTION_REQUEST = /(?:^|[.!?]\s+)(?:please\s+)?(?:book|reserve|cancel|pay|charge|purchase|buy|accept|agree|authorize|change|modify|redirect|release|order|schedule)\b|\b(?:ask|tell|have|instruct)\s+(?:them|the recipient|the provider|the business)\s+to\s+(?:book|reserve|cancel|pay|charge|purchase|buy|accept|agree|authorize|change|modify|redirect|release|order|schedule)\b|\b(?:can|could|would|will|should)\s+(?:you|i|we)\s+(?:book|reserve|cancel|pay|charge|purchase|buy|accept|agree|authorize|change|modify|redirect|release|order|schedule)\b|\bmake\s+(?:a|the|any)\s+(?:reservation|booking|payment|purchase|commitment|change)\b/i;
 
 function unsafeSpokenUserData(
   input: { label: string; value: string; kind: "objective" | "question" | "playbook" },
@@ -55,7 +56,13 @@ function unsafeSpokenUserData(
     : primaryLanguage === "ru"
       ? RUSSIAN_ACTION_REQUEST.test(normalized)
       : false;
-  if (containsSpeechControlInjection(normalized) || FORBIDDEN_ACTION_WORD.test(normalized) || localizedForbidden || ACTION_REQUEST.test(normalized)) return true;
+  if (
+    containsSpeechControlInjection(normalized)
+    || FORBIDDEN_ACTION_WORD.test(normalized)
+    || FORBIDDEN_CONFIRMATION.test(normalized)
+    || localizedForbidden
+    || ACTION_REQUEST.test(normalized)
+  ) return true;
   if (input.kind === "objective") {
     const localizedSafe = primaryLanguage === "ro"
       ? ROMANIAN_SAFE_OBJECTIVE_START.test(normalized)
