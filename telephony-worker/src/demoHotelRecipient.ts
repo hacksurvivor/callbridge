@@ -106,10 +106,10 @@ type Admission = {
 type ActiveSession = {
   callSid: string;
   nonceHash: string;
-  nonceConsumed: boolean;
   startedAtMs: number;
   deadlineAtMs: number;
   factIds: string[];
+  turns: number;
 };
 
 type RecipientState = {
@@ -201,6 +201,38 @@ function rejectTwiml(): Response {
   });
 }
 
+function hangupTwiml(): Response {
+  return new Response('<?xml version="1.0" encoding="UTF-8"?><Response><Hangup /></Response>', {
+    status: 200,
+    headers: { "content-type": "text/xml; charset=utf-8" },
+  });
+}
+
+function newNonce(): string {
+  return crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
+}
+
+function gatherActionUrl(publicOrigin: string, callSid: string, nonce: string): string {
+  const action = new URL("/demo-hotel/voice", publicOrigin);
+  action.searchParams.set("callSid", callSid);
+  action.searchParams.set("nonce", nonce);
+  return action.toString();
+}
+
+export function buildDemoHotelSpeechLoopTwiml(input: {
+  spokenText: string;
+  publicOrigin?: string;
+  callSid?: string;
+  nonce?: string;
+  hangup?: boolean;
+}): string {
+  const say = `<Say>${escapeXml(input.spokenText)}</Say>`;
+  if (input.hangup) return `<?xml version="1.0" encoding="UTF-8"?><Response>${say}<Hangup /></Response>`;
+  if (!input.publicOrigin || !input.callSid || !input.nonce) throw new Error("gather_callback_required");
+  const action = gatherActionUrl(input.publicOrigin, input.callSid, input.nonce);
+  return `<?xml version="1.0" encoding="UTF-8"?><Response>${say}<Gather input="speech" language="en-US" method="POST" action="${escapeXml(action)}" actionOnEmptyResult="true" speechTimeout="auto" timeout="5" /></Response>`;
+}
+
 export async function handleDemoHotelVoiceWebhook(request: Request, env: DemoHotelEnv): Promise<Response> {
   if (!env.TWILIO_AUTH_TOKEN) return new Response("Forbidden", { status: 403 });
   const signature = request.headers.get("x-twilio-signature") ?? "";
@@ -210,6 +242,24 @@ export async function handleDemoHotelVoiceWebhook(request: Request, env: DemoHot
     return new Response("Forbidden", { status: 403 });
   }
   const callSid = form.get("CallSid")?.trim() ?? "";
+  const url = new URL(request.url);
+  const callbackCallSid = url.searchParams.get("callSid")?.trim() ?? "";
+  const callbackNonce = url.searchParams.get("nonce")?.trim() ?? "";
+  if (callbackCallSid || callbackNonce) {
+    if (
+      !/^CA[0-9a-f]{32}$/i.test(callSid)
+      || callbackCallSid !== callSid
+      || !/^[A-Za-z0-9_-]{20,200}$/.test(callbackNonce)
+    ) return hangupTwiml();
+    const origin = url.origin;
+    return await env.DEMO_HOTEL_RECIPIENT.get(env.DEMO_HOTEL_RECIPIENT.idFromName("aurora-demo-hotel-v1")).fetch(
+      new Request(`${origin}/gather/${encodeURIComponent(callSid)}/${encodeURIComponent(callbackNonce)}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ speechResult: form.get("SpeechResult")?.trim() ?? "", publicOrigin: origin }),
+      }),
+    );
+  }
   const from = form.get("From")?.trim() ?? "";
   const to = form.get("To")?.trim() ?? "";
   if (!/^CA[0-9a-f]{32}$/i.test(callSid) || !validE164(from) || !validE164(to)) return rejectTwiml();
@@ -266,8 +316,6 @@ export async function demoHotelHealth(env: DemoHotelEnv): Promise<Response> {
 }
 
 export class DemoHotelRecipient extends DurableObject<DemoHotelEnv> {
-  private socket?: WebSocket;
-
   private async readState(): Promise<RecipientState> {
     const now = Date.now();
     const stored = await this.ctx.storage.get<RecipientState>("state");
@@ -294,10 +342,8 @@ export class DemoHotelRecipient extends DurableObject<DemoHotelEnv> {
     if (request.method === "POST" && url.pathname === "/admission") return this.reserve(request);
     if (request.method === "POST" && url.pathname === "/admission/cancel") return this.cancel(request);
     if (request.method === "POST" && url.pathname === "/voice") return this.voice(request);
-    const path = url.pathname.match(/^\/session\/(CA[0-9a-f]{32})\/([A-Za-z0-9_-]{20,200})$/i);
-    if (request.method === "GET" && path && request.headers.get("upgrade")?.toLowerCase() === "websocket") {
-      return this.connectConversationRelay(path[1]!, path[2]!);
-    }
+    const gather = url.pathname.match(/^\/gather\/(CA[0-9a-f]{32})\/([A-Za-z0-9_-]{20,200})$/i);
+    if (request.method === "POST" && gather) return this.gather(request, gather[1]!, gather[2]!);
     return new Response("Not found", { status: 404 });
   }
 
@@ -370,67 +416,65 @@ export class DemoHotelRecipient extends DurableObject<DemoHotelEnv> {
       || !input.publicOrigin
     ) return rejectTwiml();
 
-    const nonce = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
+    const nonce = newNonce();
     const maxSeconds = integer(this.env.DEMO_HOTEL_MAX_CONNECTED_SECONDS, 180);
     const active: ActiveSession = {
       callSid: input.callSid,
       nonceHash: await sha256(nonce),
-      nonceConsumed: false,
       startedAtMs: Date.now(),
       deadlineAtMs: Date.now() + maxSeconds * 1_000,
       factIds: [],
+      turns: 0,
     };
     await this.ctx.storage.put("state", { ...withAttempt, pending: undefined, active } satisfies RecipientState);
     await this.ctx.storage.setAlarm(active.deadlineAtMs);
-    const wsOrigin = input.publicOrigin.replace(/^http/, "ws");
-    const streamUrl = `${wsOrigin}/demo-hotel/session/${encodeURIComponent(input.callSid)}/${nonce}`;
-    const twiml = `<?xml version="1.0" encoding="UTF-8"?><Response><Connect><ConversationRelay url="${escapeXml(streamUrl)}" welcomeGreeting="${escapeXml(GREETING)}" language="en-US" /></Connect></Response>`;
+    const twiml = buildDemoHotelSpeechLoopTwiml({
+      spokenText: GREETING,
+      publicOrigin: input.publicOrigin,
+      callSid: input.callSid,
+      nonce,
+    });
     return new Response(twiml, { status: 200, headers: { "content-type": "text/xml; charset=utf-8" } });
   }
 
-  private async connectConversationRelay(callSid: string, nonce: string): Promise<Response> {
+  private async gather(request: Request, callSid: string, nonce: string): Promise<Response> {
     const state = await this.readState();
-    if (!state.active || state.active.callSid !== callSid || state.active.nonceConsumed || await sha256(nonce) !== state.active.nonceHash) {
-      return new Response("Forbidden", { status: 403 });
+    if (!state.active || state.active.callSid !== callSid || await sha256(nonce) !== state.active.nonceHash) {
+      return hangupTwiml();
     }
-    const pair = new WebSocketPair();
-    const client = pair[0];
-    const server = pair[1];
-    server.accept();
-    this.socket = server;
-    await this.ctx.storage.put("state", { ...state, active: { ...state.active, nonceConsumed: true } } satisfies RecipientState);
-    server.addEventListener("message", (event) => this.ctx.waitUntil(this.onMessage(String(event.data))));
-    server.addEventListener("close", () => this.ctx.waitUntil(this.finish("socket_closed")));
-    server.addEventListener("error", () => this.ctx.waitUntil(this.finish("conversation_relay_error")));
-    return new Response(null, { status: 101, webSocket: client });
-  }
-
-  private async onMessage(raw: string): Promise<void> {
-    let event: { type?: string; voicePrompt?: string; callSid?: string; description?: string };
-    try { event = JSON.parse(raw); } catch { return; }
-    const state = await this.readState();
-    if (!state.active || !this.socket) return;
-    if (event.type === "connected" && event.callSid && event.callSid !== state.active.callSid) {
-      await this.hangup(state.active.callSid);
-      await this.finish("call_sid_mismatch");
-      return;
+    if (state.active.deadlineAtMs <= Date.now() || state.active.turns >= 24) {
+      await this.hangup(callSid);
+      await this.finish(state.active.deadlineAtMs <= Date.now() ? "connected_timeout" : "turn_limit");
+      return hangupTwiml();
     }
-    if (event.type === "prompt" && typeof event.voicePrompt === "string") {
-      const answer = lookupDemoHotelFact(event.voicePrompt);
-      this.socket.send(JSON.stringify({ type: "text", token: answer.spokenText, last: true }));
-      const factIds = answer.kind === "fact" && !state.active.factIds.includes(answer.factId)
-        ? [...state.active.factIds, answer.factId]
-        : state.active.factIds;
-      await this.ctx.storage.put("state", { ...state, active: { ...state.active, factIds } } satisfies RecipientState);
-      if (answer.kind === "conversation" && answer.intent === "goodbye") {
-        this.socket.send(JSON.stringify({ type: "end", reason: "completed" }));
-      }
-      return;
+    const input = await readJson<{ speechResult: string; publicOrigin: string }>(request);
+    const speechResult = typeof input.speechResult === "string" ? input.speechResult.slice(0, 2_000).trim() : "";
+    const answer = speechResult ? lookupDemoHotelFact(speechResult) : null;
+    const spokenText = answer?.spokenText ?? "I didn't hear a question. Please try again.";
+    const factIds = answer?.kind === "fact" && !state.active.factIds.includes(answer.factId)
+      ? [...state.active.factIds, answer.factId]
+      : state.active.factIds;
+    const isGoodbye = answer?.kind === "conversation" && answer.intent === "goodbye";
+    if (isGoodbye) {
+      await this.ctx.storage.put("state", { ...state, active: { ...state.active, factIds, turns: state.active.turns + 1 } } satisfies RecipientState);
+      await this.finish("completed");
+      return new Response(buildDemoHotelSpeechLoopTwiml({ spokenText, hangup: true }), {
+        status: 200,
+        headers: { "content-type": "text/xml; charset=utf-8" },
+      });
     }
-    if (event.type === "error") {
-      await this.hangup(state.active.callSid);
-      await this.finish("conversation_relay_error");
-    }
+    if (!input.publicOrigin) return hangupTwiml();
+    const nextNonce = newNonce();
+    await this.ctx.storage.put("state", {
+      ...state,
+      active: { ...state.active, nonceHash: await sha256(nextNonce), factIds, turns: state.active.turns + 1 },
+    } satisfies RecipientState);
+    return new Response(buildDemoHotelSpeechLoopTwiml({
+      spokenText,
+      publicOrigin: input.publicOrigin,
+      callSid,
+      nonce: nextNonce,
+    }), { status: 200, headers: { "content-type": "text/xml; charset=utf-8" } });
   }
 
   private async health(): Promise<Response> {
@@ -463,7 +507,6 @@ export class DemoHotelRecipient extends DurableObject<DemoHotelEnv> {
   private async finish(reason: string): Promise<void> {
     const state = await this.readState();
     if (!state.active) return;
-    this.socket = undefined;
     await this.ctx.storage.put("state", { ...state, active: undefined, lastTerminalReason: reason } satisfies RecipientState);
     await this.ctx.storage.deleteAlarm();
   }

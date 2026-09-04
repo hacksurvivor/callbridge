@@ -28,6 +28,7 @@ const CONFIRMATION_TTL_MS = 5 * 60 * 1_000;
 const ABUSE_WINDOW_MS = 24 * 60 * 60 * 1_000;
 const MAX_CALLS_PER_USER_WINDOW = 10;
 const MAX_CALLS_PER_DESTINATION_WINDOW = 3;
+const MAX_CONTROLLED_DEMO_CALLS_PER_DESTINATION_WINDOW = 10;
 const ACTIVE_ATTEMPT_STATUSES = ["queued", "dialing", "connected", "ending"] as const;
 
 const taskSnapshotValidator = v.object({
@@ -327,6 +328,7 @@ async function requireDestinationSafety(
   ctx: QueryCtx | MutationCtx,
   ownerId: string,
   destinationE164: string,
+  controlledDemo = false,
 ): Promise<void> {
   const optOut = await ctx.db
     .query("inquiryRecipientOptOuts")
@@ -360,6 +362,9 @@ async function requireDestinationSafety(
         .gte("createdAt", cutoff))
       .take(MAX_CALLS_PER_USER_WINDOW)
   )));
+  const destinationWindowLimit = controlledDemo
+    ? MAX_CONTROLLED_DEMO_CALLS_PER_DESTINATION_WINDOW
+    : MAX_CALLS_PER_DESTINATION_WINDOW;
   const destinationWindows = await Promise.all(countedDispatchStates.map((dispatchState) => (
     ctx.db
       .query("inquiryAttempts")
@@ -367,12 +372,12 @@ async function requireDestinationSafety(
         .eq("destinationE164", destinationE164)
         .eq("dispatchState", dispatchState)
         .gte("createdAt", cutoff))
-      .take(MAX_CALLS_PER_DESTINATION_WINDOW)
+      .take(destinationWindowLimit)
   )));
   if (ownerWindows.reduce((total, attempts) => total + attempts.length, 0) >= MAX_CALLS_PER_USER_WINDOW) {
     throw new ConvexError({ code: "USER_RATE_LIMITED", retryAfterSeconds: 60 * 60 });
   }
-  if (destinationWindows.reduce((total, attempts) => total + attempts.length, 0) >= MAX_CALLS_PER_DESTINATION_WINDOW) {
+  if (destinationWindows.reduce((total, attempts) => total + attempts.length, 0) >= destinationWindowLimit) {
     throw new ConvexError({ code: "DESTINATION_RATE_LIMITED", retryAfterSeconds: 60 * 60 });
   }
 }
@@ -660,7 +665,7 @@ export const createConfirmationIntent = mutation({
     await requireApprovedPlaybook(ctx, ownerId, task.contract);
     await requireAvailableCredits(ctx, ownerId, task.contract);
     const pricingQuote = requireCurrentPricingQuote(task);
-    await requireDestinationSafety(ctx, ownerId, task.contract.destination.e164PhoneNumber);
+    await requireDestinationSafety(ctx, ownerId, task.contract.destination.e164PhoneNumber, Boolean(task.demoRecipientId));
 
     const nowDate = new Date();
     const now = nowDate.toISOString();
@@ -796,7 +801,7 @@ export const confirmAndQueue = mutation({
     if (intent.pricingQuoteId !== pricingQuote.quoteId) {
       throw new ConvexError({ code: "PRICING_REVISION_MISMATCH" });
     }
-    await requireDestinationSafety(ctx, ownerId, task.contract.destination.e164PhoneNumber);
+    await requireDestinationSafety(ctx, ownerId, task.contract.destination.e164PhoneNumber, Boolean(task.demoRecipientId));
     const account = await requireAvailableCredits(ctx, ownerId, task.contract);
     const existingTaskAttempt = await ctx.db
       .query("inquiryAttempts")

@@ -93,6 +93,108 @@ function authorized(request: Request, secret: string): boolean {
   return Boolean(secret && value === `Bearer ${secret}`);
 }
 
+type SafeRealtimeError = {
+  type?: string;
+  code?: string;
+  message?: string;
+  param?: string;
+};
+
+function safeRealtimeError(value: unknown): SafeRealtimeError | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const record = value as Record<string, unknown>;
+  const text = (key: keyof SafeRealtimeError): string | undefined => {
+    const candidate = record[key];
+    return typeof candidate === "string" ? candidate.slice(0, 240) : undefined;
+  };
+  return {
+    ...(text("type") ? { type: text("type") } : {}),
+    ...(text("code") ? { code: text("code") } : {}),
+    ...(text("message") ? { message: text("message") } : {}),
+    ...(text("param") ? { param: text("param") } : {}),
+  };
+}
+
+async function realtimeSmoke(request: Request, env: Env): Promise<Response> {
+  if (!authorized(request, env.DISPATCH_API_KEY)) return json({ error: "unauthorized" }, 401);
+  if (!env.OPENAI_API_KEY || !env.OPENAI_REALTIME_MODEL) return json({ ok: false, stage: "configuration" }, 503);
+  let response: Response;
+  try {
+    response = await fetch(`https://api.openai.com/v1/realtime?model=${encodeURIComponent(env.OPENAI_REALTIME_MODEL)}`, {
+      headers: {
+        authorization: `Bearer ${env.OPENAI_API_KEY}`,
+        upgrade: "websocket",
+        "OpenAI-Safety-Identifier": "callbridge-internal-realtime-smoke",
+      },
+    });
+  } catch {
+    return json({ ok: false, stage: "upgrade_fetch" }, 502);
+  }
+  const socket = response.webSocket;
+  if (response.status !== 101 || !socket) return json({ ok: false, stage: "upgrade", status: response.status }, 502);
+  socket.accept();
+  const eventTypes: string[] = [];
+  return await new Promise<Response>((resolve) => {
+    let settled = false;
+    const finish = (body: Record<string, unknown>, status = 200): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      try { socket.close(1000, "smoke complete"); } catch { /* already closed */ }
+      resolve(json({ model: env.OPENAI_REALTIME_MODEL, eventTypes, ...body }, status));
+    };
+    const timer = setTimeout(() => finish({ ok: false, stage: "first_audio_timeout" }, 504), 12_000);
+    socket.addEventListener("message", (message) => {
+      let event: { type?: string; error?: unknown };
+      try { event = JSON.parse(String(message.data)); } catch { return; }
+      if (event.type && eventTypes.length < 32 && !eventTypes.includes(event.type)) eventTypes.push(event.type);
+      if (event.type === "session.updated") {
+        socket.send(JSON.stringify({
+          type: "response.create",
+          response: { instructions: "Say exactly: Realtime bridge ready." },
+        }));
+      } else if (event.type === "response.output_audio.delta" || event.type === "response.audio.delta") {
+        finish({ ok: true, stage: "first_audio" });
+      } else if (event.type === "error") {
+        finish({ ok: false, stage: "provider_error", error: safeRealtimeError(event.error) }, 502);
+      }
+    });
+    socket.addEventListener("close", (event) => finish({
+      ok: false,
+      stage: "socket_closed",
+      closeCode: event.code,
+      wasClean: event.wasClean,
+    }, 502));
+    socket.addEventListener("error", () => finish({ ok: false, stage: "socket_error" }, 502));
+    socket.send(JSON.stringify({
+      type: "session.update",
+      session: {
+        type: "realtime",
+        model: env.OPENAI_REALTIME_MODEL,
+        output_modalities: ["audio"],
+        instructions: "This is an internal connectivity test. Return only the requested phrase.",
+        reasoning: { effort: "low" },
+        truncation: {
+          type: "retention_ratio",
+          retention_ratio: 0.8,
+          token_limits: { post_instructions: 8_000 },
+        },
+        audio: {
+          input: {
+            format: { type: "audio/pcmu" },
+            transcription: { model: "gpt-4o-transcribe", language: "en" },
+            noise_reduction: { type: "near_field" },
+            turn_detection: { type: "server_vad", create_response: false, interrupt_response: true },
+          },
+          output: { format: { type: "audio/pcmu" }, voice: "marin" },
+        },
+        tools: [],
+        tool_choice: "none",
+      },
+    }));
+  });
+}
+
 function mediaStreamPath(dispatchId: string, streamToken: string): string {
   return `/media-stream/${encodeURIComponent(dispatchId)}/${encodeURIComponent(streamToken)}`;
 }
@@ -358,6 +460,7 @@ export default {
     if (request.method === "POST" && url.pathname === "/dispatch") return await dispatch(request, env);
     if (request.method === "POST" && url.pathname === "/demo-hotel/voice") return await handleDemoHotelVoiceWebhook(request, env);
     if (request.method === "POST" && url.pathname === "/internal/reconcile-twilio-call") return await reconcileTwilioCall(request, env);
+    if (request.method === "POST" && url.pathname === "/internal/realtime-smoke") return await realtimeSmoke(request, env);
     const twilioStatus = parseTwilioStatusPath(url.pathname);
     if (request.method === "POST" && twilioStatus) return await handleTwilioStatusCallback(request, env, twilioStatus);
     if (request.method === "GET" && url.pathname === "/internal/demo-hotel/health") {
