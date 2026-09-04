@@ -1,4 +1,4 @@
-# CallBridge web design system
+# Concierge web design system
 
 Source of truth: `../docs/designs/assets/callbridge-review-approved.png` at 1600 × 1000.
 

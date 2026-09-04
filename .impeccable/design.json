@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "generatedAt": "2026-09-03T10:43:15Z",
-  "title": "Design System: CallBridge",
+  "title": "Design System: Concierge",
   "extensions": {
     "colorMeta": {
       "ink": { "role": "primary", "displayName": "Conversation Ink", "canonical": "#0d0d0d", "tonalRamp": ["#111111", "#292929", "#444444", "#606060", "#838383", "#a9a9a9", "#d1d1d1", "#f3f3f3"] },
@@ -72,13 +72,13 @@
       "kind": "input",
       "refersTo": "composer",
       "description": "Bottom-anchored capsule matching the readable conversation measure.",
-      "html": "<div class=\"ds-composer\"><span>Message CallBridge</span><button aria-label=\"Send\">↑</button></div>",
+      "html": "<div class=\"ds-composer\"><span>Message Concierge</span><button aria-label=\"Send\">↑</button></div>",
       "css": ".ds-composer{width:520px;min-height:58px;display:flex;align-items:center;justify-content:space-between;padding:9px 9px 9px 16px;border:1px solid #dedede;border-radius:28px;background:#fff;color:#777;font:400 15px ui-sans-serif,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;box-shadow:0 2px 10px rgba(0,0,0,.08)}.ds-composer button{width:38px;height:38px;border:0;border-radius:50%;background:#0d0d0d;color:#fff;font-size:18px;cursor:pointer}.ds-composer button:hover{background:#303030}.ds-composer button:focus-visible{outline:2px solid #0d0d0d;outline-offset:2px}"
     }
   ],
   "narrative": {
     "northStar": "The Quiet Task Thread",
-    "overview": "CallBridge adopts the current ChatGPT web interaction language so the phone-task workflow feels native to an assistant conversation. The conversation owns the canvas; operational detail appears only as compact reasoning, tool, plan, approval, and activity elements. The system is neutral, flat, and information-led. It rejects dashboard density, oversized branding, decorative process diagrams, and clickable chrome without a real state or action.",
+    "overview": "Concierge adopts the current ChatGPT web interaction language so the phone-task workflow feels native to an assistant conversation. The conversation owns the canvas; operational detail appears only as compact reasoning, tool, plan, approval, and activity elements. The system is neutral, flat, and information-led. It rejects dashboard density, oversized branding, decorative process diagrams, and clickable chrome without a real state or action.",
     "keyCharacteristics": ["Open white conversation canvas with generous negative space.", "Warm gray navigation and soft gray user messages.", "Plain assistant text with compact reasoning and tool disclosures.", "Black primary controls; red reserved for consequential approval.", "A narrow, optional activity rail using small source favicons."],
     "rules": [
       { "name": "The Rare Signal Rule", "body": "Approval red and success green appear only when their state is true; neutral work stays neutral.", "section": "colors" },

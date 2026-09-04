@@ -13,7 +13,7 @@ struct CallBridgeMacHostApp: App {
     @StateObject private var controller = MacHostController()
 
     var body: some Scene {
-        MenuBarExtra("CallBridge Mac Host", systemImage: controller.isPolling ? "iphone.and.arrow.forward" : "laptopcomputer.slash") {
+        MenuBarExtra("Concierge Mac Host", systemImage: controller.isPolling ? "iphone.and.arrow.forward" : "laptopcomputer.slash") {
             MacHostMenu(controller: controller)
                 .task { controller.start() }
         }
@@ -36,7 +36,7 @@ private struct MacHostMenu: View {
                 Image(systemName: "laptopcomputer.and.iphone")
                     .font(.title2)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("CallBridge Mac")
+                    Text("Concierge Mac")
                         .font(.headline)
                     Text(controller.activeCommand)
                         .font(.caption)

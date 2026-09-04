@@ -4,7 +4,7 @@ import '../../web/src/styles.css';
 import '../../web/src/artifact-styles.css';
 
 export const metadata: Metadata = {
-  title: 'CallBridge',
+  title: 'Concierge',
   description: 'ChatGPT prepares the call. You keep control.',
 };
 

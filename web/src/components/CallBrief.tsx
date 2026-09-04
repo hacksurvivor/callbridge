@@ -167,7 +167,7 @@ export function CallBrief({
         },
       });
     } catch {
-      setSaveError("CallBridge could not save these changes. Review the fields and try again.");
+      setSaveError("Concierge could not save these changes. Review the fields and try again.");
     } finally {
       setSaving(false);
     }
@@ -212,7 +212,7 @@ export function CallBrief({
               </div>
               <div className="brief-row">
                 <div className="brief-label">Questions</div>
-                <div className="assistant-questions" aria-label="Questions CallBridge will ask">
+                <div className="assistant-questions" aria-label="Questions Concierge will ask">
                   <ol className="question-list">
                     {contract.questions.map((question, index) => (
                       <li key={question.id}><span className="question-number">{index + 1}</span><span>{question.prompt}</span></li>

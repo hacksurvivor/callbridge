@@ -16,7 +16,7 @@ People who feel anxious or uncomfortable making calls, face a language barrier, 
 
 ## Product Purpose
 
-CallBridge turns a human-language request, voice note, link, or photo into a clarified task, a reviewable contact draft, an explicitly authorised first contact, a readable live activity feed, and a factual result or choice. It removes the hassle and uncertainty of calls without adding a control panel, hidden commitments, or avoidable questions.
+Concierge turns a human-language request, voice note, link, or photo into a clarified task, a reviewable contact draft, an explicitly authorised first contact, a readable live activity feed, and a factual result or choice. It removes the hassle and uncertainty of calls without adding a control panel, hidden commitments, or avoidable questions.
 
 ## Positioning
 
@@ -48,7 +48,7 @@ An agent that takes care of questions involving phone calls. It can carry a conv
 
 ## Brand Commitments
 
-`CallBridge` is a working name, not an approved identity. Product language is personal, friendly, calm, clear, and nontechnical. The experience should feel as simple as a familiar conversational assistant, never like a professional operations console.
+`Concierge` is the approved product identity. Product language is personal, friendly, calm, clear, and nontechnical. The experience should feel as simple as a familiar conversational assistant, never like a professional operations console.
 
 ## Evidence on Hand
 

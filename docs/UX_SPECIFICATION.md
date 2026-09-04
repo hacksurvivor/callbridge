@@ -1,4 +1,4 @@
-# CallBridge UX Specification
+# Concierge UX Specification
 
 Status: interaction discovery consolidated; an Expo integration prototype exists;
 production UI and visual-world approval are pending.
@@ -67,7 +67,7 @@ Drafting
   -> Failed / unavailable: factual reason and recovery options
 ```
 
-Change and cancel are contextual transitions, not global destinations. Cancelling an existing commitment and stopping CallBridge's future work are distinct states.
+Change and cancel are contextual transitions, not global destinations. Cancelling an existing commitment and stopping Concierge's future work are distinct states.
 
 ## 3. Mobbin evidence pack
 
@@ -126,9 +126,9 @@ Ask these one at a time through the coordinator. Later answers may eliminate lat
 
 1. **Launch wedge:** Is the first release limited to hotel/travel calls, as the README states, or must it launch across Travel, Restaurants, Marketplace, Services, Property, and Delivery?
 2. **Platform and delivery — resolved for engineering:** adaptive Expo / React Native with iOS-first interaction quality. Final launch-platform scope remains a release decision.
-3. **Live authority:** During a live call, which decisions may CallBridge make without interrupting, and which exact changes to price, timing, terms, substitution, or commitment always require approval?
-4. **Transaction boundary:** In the first release, may CallBridge complete a reservation or purchase after approval, or may it only present confirmed options and leave the final transaction outside the product?
-5. **Unknown cancellation consequence:** If a provider cannot state the fee before contact, may CallBridge call only to learn the consequence, or must cancellation stop until the consequence is independently known?
+3. **Live authority:** During a live call, which decisions may Concierge make without interrupting, and which exact changes to price, timing, terms, substitution, or commitment always require approval?
+4. **Transaction boundary:** In the first release, may Concierge complete a reservation or purchase after approval, or may it only present confirmed options and leave the final transaction outside the product?
+5. **Unknown cancellation consequence:** If a provider cannot state the fee before contact, may Concierge call only to learn the consequence, or must cancellation stop until the consequence is independently known?
 6. **Transcript consent and retention:** Which jurisdictions and languages launch first, what recording/transcription disclosure is required, and how long are audio and translated transcripts retained?
 7. **Sensitive information policy:** Which saved details count as sensitive, who may authorize disclosure in shared tasks, and how long does a disclosure confirmation remain valid?
 8. **Family authority matrix:** What concrete actions sit behind each plain-language collaborator role, especially spending, cancellation, sensitive disclosure, memory editing, and inviting others?

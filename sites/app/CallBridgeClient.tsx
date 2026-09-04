@@ -30,7 +30,7 @@ function AccessState({ kicker, title, detail }: { kicker: string; title: string;
   return (
     <div className="access-shell">
       <header className="topbar access-topbar">
-        <div className="brand"><BrandMark />CallBridge</div>
+        <div className="brand"><BrandMark />Concierge</div>
         <div className="chatgpt-status"><span className="status-dot" />Built for ChatGPT</div>
       </header>
       <main className="access-main">
@@ -56,13 +56,13 @@ function AuthenticatedWorkspace({
   authState: 'connecting' | 'ready' | 'failed';
 }) {
   if (authState === 'connecting') {
-    return <AccessState kicker="Secure session" title="Connecting your CallBridge workspace" />;
+    return <AccessState kicker="Secure session" title="Connecting your Concierge workspace" />;
   }
   if (authState === 'failed') {
     return (
       <AccessState
         kicker="Secure session"
-        title="ChatGPT sign-in could not reach CallBridge"
+        title="ChatGPT sign-in could not reach Concierge"
         detail="Reload this page to create a new short-lived session. No WebMCP tools were registered."
       />
     );
@@ -102,7 +102,7 @@ export function CallBridgeClient({ convexUrl }: { convexUrl: string }) {
   }, []);
 
   if (!convex || !Workspace) {
-    return <AccessState kicker="Secure session" title="Connecting your CallBridge workspace" />;
+    return <AccessState kicker="Secure session" title="Connecting your Concierge workspace" />;
   }
 
   return (

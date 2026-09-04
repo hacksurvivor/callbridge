@@ -387,7 +387,7 @@ function oauthPage(title: string, message: string, status = 200): Response {
   const escape = (value: string) => value.replace(/[&<>"']/g, (character) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;",
   })[character] ?? character);
-  const body = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escape(title)}</title></head><body><main><h1>${escape(title)}</h1><p>${escape(message)}</p><p>You can close this window and return to CallBridge.</p></main></body></html>`;
+  const body = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escape(title)}</title></head><body><main><h1>${escape(title)}</h1><p>${escape(message)}</p><p>You can close this window and return to Concierge.</p></main></body></html>`;
   return new Response(body, {
     status,
     headers: {
@@ -410,7 +410,7 @@ http.route({
     if (!code || !state) return oauthPage("Gmail was not connected", "The OAuth callback was incomplete.", 400);
     try {
       const result = await ctx.runAction(completeGmailOAuth, { code, state });
-      return oauthPage("Gmail connected", `${result.emailAddress} is available to CallBridge in read-only mode.`);
+      return oauthPage("Gmail connected", `${result.emailAddress} is available to Concierge in read-only mode.`);
     } catch {
       return oauthPage("Gmail was not connected", "The authorization was invalid, expired, or could not be completed.", 400);
     }

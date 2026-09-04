@@ -109,7 +109,7 @@ export function MacCompanion() {
   if (!pairing) {
     return <View style={styles.screen}>
       <Text style={styles.title}>Pair your Mac</Text>
-      <Text style={styles.copy}>Copy the pairing token from the CallBridge menu-bar app.</Text>
+      <Text style={styles.copy}>Copy the pairing token from the Concierge menu-bar app.</Text>
       <TextInput
         accessibilityLabel="Mac pairing token"
         autoCapitalize="none"

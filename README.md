@@ -1,15 +1,15 @@
-# CallBridge
+# Concierge
 
 > **The web has APIs. The rest of the world has phone numbers. Ask ChatGPT to call either.**
 
-CallBridge lets a person describe any legitimate information-gathering inquiry.
+Concierge lets a person describe any legitimate information-gathering inquiry.
 ChatGPT turns it into a visible structured call brief on the webpage; the person
-reviews the exact revision and is the only one who can confirm it. CallBridge
+reviews the exact revision and is the only one who can confirm it. Concierge
 then places one disclosed multilingual call and returns an evidence-bound answer.
 
 ## WebMCP web app
 
-`web/` is the primary CallBridge surface. ChatGPT can use five stable
+`web/` is the primary Concierge surface. ChatGPT can use five stable
 general page tools to create, replace, read, monitor, and retrieve the result of a
 structured inquiry for any supported destination or service. The inquiry
 itself is data: objective, ordered questions, private background, shareable
@@ -37,7 +37,7 @@ credit; neither outcome creates a second attempt.
 
 The hackathon submission adds `create_demo_call_draft`, a sixth server-owned
 entry point for the controlled Aurora Demo Hotel recipient. It lets a judge ask
-original questions while CallBridge supplies the private destination, fixed
+original questions while Concierge supplies the private destination, fixed
 information-only authority, one-attempt limit, and a one-time challenge credit.
 The five general tools and this controlled creator ship as one static,
 artifact-free catalog. Convex remains authoritative for lifecycle permissions,
@@ -169,7 +169,7 @@ integration boundaries.
 
 ## Challenge lineage
 
-CallBridge existed before the WebMCP Challenge as a mobile-first call-avoidance
+Concierge existed before the WebMCP Challenge as a mobile-first call-avoidance
 prototype. The challenge work is the web-first WebMCP adapter and authenticated
 review/confirmation/result experience, not a claim that the whole repository was
 created during the event. See [the submission notes](docs/SUBMISSION.md) for the

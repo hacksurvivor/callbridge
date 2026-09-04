@@ -24,7 +24,7 @@ describe("typed task artifact contracts", () => {
       type: "conversation",
       channel: "sms",
       title: "Provider conversation",
-      participants: [{ id: "agent", displayName: "CallBridge", role: "agent" }],
+      participants: [{ id: "agent", displayName: "Concierge", role: "agent" }],
     },
     {
       type: "auth_required",
@@ -57,11 +57,11 @@ describe("typed task artifact contracts", () => {
   it("allows only agent draft append and non-terminal metadata updates", () => {
     expect(parseWebMcpArtifactPatch({
       type: "conversation",
-      appendAgentDraft: { authorDisplayName: "CallBridge", text: "Draft reply for review." },
+      appendAgentDraft: { authorDisplayName: "Concierge", text: "Draft reply for review." },
     })).toMatchObject({ type: "conversation" });
     for (const forbidden of [
       { type: "conversation", providerMessage: { text: "Fake provider reply" } },
-      { type: "conversation", appendAgentDraft: { authorDisplayName: "CallBridge", text: "send this now" }, delivered: true },
+      { type: "conversation", appendAgentDraft: { authorDisplayName: "Concierge", text: "send this now" }, delivered: true },
       { type: "auth_required", state: "authorized" },
       { type: "user_question", response: { value: "Answer" } },
       { type: "evidence", caption: "Replace evidence" },

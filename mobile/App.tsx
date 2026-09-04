@@ -1,5 +1,5 @@
 /*
-THESIS: CallBridge is a calm cue sheet for stressful calls, not a generic chat.
+THESIS: Concierge is a calm cue sheet for stressful calls, not a generic chat.
 OWN-WORLD: Ink-black iOS night, a cobalt horizon for live work, rose only for decisions.
 STORY: Ask naturally, see only factual work, decide only when it matters.
 FIRST VIEWPORT: large question above the active cue, with the composer anchored at the bottom.
@@ -101,7 +101,7 @@ function CallBridge() {
   </View>;
 }
 
-function Header({ connected }: { connected: boolean }) { return <View style={styles.header}><Text style={styles.brand}>CallBridge</Text><View style={styles.headerState}><View style={[styles.statusDot, connected && styles.statusLive]} /><Text style={styles.headerStateText}>{connected ? "Workspace" : "Preview"}</Text></View></View>; }
+function Header({ connected }: { connected: boolean }) { return <View style={styles.header}><Text style={styles.brand}>Concierge</Text><View style={styles.headerState}><View style={[styles.statusDot, connected && styles.statusLive]} /><Text style={styles.headerStateText}>{connected ? "Workspace" : "Preview"}</Text></View></View>; }
 function StageTransition({ stage, reduceMotion, children }: { stage: TaskStage; reduceMotion: boolean; children: ReactNode }) {
   const progress = useRef(new Animated.Value(1)).current;
   const previousStage = useRef(stage);

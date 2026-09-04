@@ -290,7 +290,7 @@ export function LiveWorkspace() {
         objective,
         questions: [{ id: "primary-request", prompt: objective, required: true }],
         context: {
-          privateBackground: "Created by the user from the CallBridge task composer.",
+          privateBackground: "Created by the user from the Concierge task composer.",
           shareableFacts: [],
         },
         playbook: undefined,
@@ -332,15 +332,15 @@ export function LiveWorkspace() {
     return <AccessState kicker="Task unavailable" title="Ask ChatGPT to create a new call draft" detail="The URL is only a convenience pointer; server ownership is always rechecked." />;
   }
   if (toolState === "unsupported") {
-    return <AccessState kicker="WebMCP unavailable" title="Open CallBridge in ChatGPT’s supported browser" detail="No tools were registered in this browser." />;
+    return <AccessState kicker="WebMCP unavailable" title="Open Concierge in ChatGPT’s supported browser" detail="No tools were registered in this browser." />;
   }
   if (toolState === "failed") {
-    return <AccessState kicker="Connection issue" title="CallBridge could not register its tools" detail="Reload this page before asking ChatGPT to try again." />;
+    return <AccessState kicker="Connection issue" title="Concierge could not register its tools" detail="Reload this page before asking ChatGPT to try again." />;
   }
   return (
     <AccessState
       kicker={toolState === "ready" ? "Connected to ChatGPT" : "Connecting"}
-      title={toolState === "ready" ? "Ask ChatGPT to prepare any inquiry call" : "Registering CallBridge tools"}
+      title={toolState === "ready" ? "Ask ChatGPT to prepare any inquiry call" : "Registering Concierge tools"}
       {...(toolState === "ready" ? {
         detail: "ChatGPT can prepare, revise, and read this controlled call task. Confirmation remains webpage-only.",
       } : {})}
@@ -351,7 +351,7 @@ export function LiveWorkspace() {
 function AuthenticationBoundary() {
   const auth = useAuth();
   const convexAuth = useConvexAuth();
-  if (auth.isLoading || convexAuth.isLoading) return <AccessState kicker="Secure session" title="Checking your CallBridge session" />;
+  if (auth.isLoading || convexAuth.isLoading) return <AccessState kicker="Secure session" title="Checking your Concierge session" />;
   if (!auth.user) {
     return (
       <AccessState
@@ -377,7 +377,7 @@ export function ProductionApp() {
     [configuration?.convexUrl],
   );
   if (!configuration || !convex) {
-    return <AccessState kicker="Setup required" title="CallBridge is not configured" detail="Convex and WorkOS public client settings are missing. No WebMCP tools were registered." />;
+    return <AccessState kicker="Setup required" title="Concierge is not configured" detail="Convex and WorkOS public client settings are missing. No WebMCP tools were registered." />;
   }
 
   const handleAuthRedirect = ({ state }: { state?: unknown }) => {

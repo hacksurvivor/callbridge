@@ -121,7 +121,7 @@ function GalleryContent({ media }: { media: readonly TaskMedia[] }) {
     <Dialog open={Boolean(selected)} onOpenChange={(open) => { if (!open) setSelected(null); }}>
       <section className="context-section context-gallery">
         <h3>Files & images</h3>
-        <p>Images CallBridge can display for this task.</p>
+        <p>Images Concierge can display for this task.</p>
         {media.length ? (
           <div className="gallery-grid">
             {media.map((item) => (

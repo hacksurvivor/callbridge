@@ -1,4 +1,4 @@
-# CallBridge implementation roadmap
+# Concierge implementation roadmap
 
 Updated: 2026-08-27
 
@@ -36,7 +36,7 @@ effect is enabled and no live call has been made.
 ## Completed development activation
 
 - Convex development deployment in EU/Ireland.
-- Isolated WorkOS `CallBridge` Staging environment wired to Convex AuthKit.
+- Isolated WorkOS `Concierge` Staging environment wired to Convex AuthKit.
 - OpenAI Realtime model credential verified and stored server-side.
 - EAS project linked; Expo server token, notification native module and explicit
   registration helper added.
@@ -46,9 +46,9 @@ effect is enabled and no live call has been made.
 - Twilio Media Streams to OpenAI Realtime Worker deployed with provider credentials,
   policy configuration, and `EXTERNAL_EFFECTS_ENABLED=false` verified by its live
   health and authenticated dispatch endpoints.
-- Isolated Twilio `CallBridge` subaccount and calls-create-only API key configured.
+- Isolated Twilio `Concierge` subaccount and calls-create-only API key configured.
 - Twilio Media Streams to OpenAI Realtime Cloudflare Worker implemented and dry-run validated; provider effects default off.
-- Google Cloud `CallBridge` project and Gmail API created; read-only OAuth callback
+- Google Cloud `Concierge` project and Gmail API created; read-only OAuth callback
   is deployed in Convex dev and its refresh-token encryption key is configured.
 
 ## Remaining external activation gates

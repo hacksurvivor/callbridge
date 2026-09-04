@@ -310,7 +310,7 @@ export type WebMcpError = {
 };
 
 const WEBMCP_ERROR_MESSAGES: Record<WebMcpErrorCode, string> = {
-  AUTH_REQUIRED: "Sign in to CallBridge to continue.",
+  AUTH_REQUIRED: "Sign in to Concierge to continue.",
   FORBIDDEN: "You do not have access to this call task.",
   NOT_FOUND: "The call task was not found.",
   INVALID_INPUT: "The request does not match the hotel demo contract.",
@@ -319,7 +319,7 @@ const WEBMCP_ERROR_MESSAGES: Record<WebMcpErrorCode, string> = {
   DEMO_POLICY_DENIED: "The request is outside the controlled hotel demo policy.",
   RATE_UNAVAILABLE: "A current destination rate is required before this call can be confirmed.",
   UNSUPPORTED_ENVIRONMENT: "This browser does not support the required WebMCP interface.",
-  INTERNAL_ERROR: "CallBridge could not complete the request.",
+  INTERNAL_ERROR: "Concierge could not complete the request.",
 };
 
 const RETRYABLE_WEBMCP_ERRORS = new Set<WebMcpErrorCode>([

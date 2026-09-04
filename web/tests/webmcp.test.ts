@@ -171,7 +171,7 @@ describe("CallBridge generalized WebMCP registration", () => {
         ok: false,
         error: {
           code: "INTERNAL_ERROR",
-          message: "CallBridge could not complete the request.",
+          message: "Concierge could not complete the request.",
           retryable: true,
         },
       });

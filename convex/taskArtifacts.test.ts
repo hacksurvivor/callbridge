@@ -64,7 +64,7 @@ describe("task artifact durable state", () => {
       taskId: draft.taskId,
       expectedTaskRevision: draft.revision,
       idempotencyKey: "artifact-idempotent-create",
-      artifact: { type: "conversation", channel: "sms", title: "Provider thread", participants: [{ id: "agent", displayName: "CallBridge", role: "agent" }] },
+      artifact: { type: "conversation", channel: "sms", title: "Provider thread", participants: [{ id: "agent", displayName: "Concierge", role: "agent" }] },
     };
     const first = await owner.mutation(createArtifact, args);
     const repeated = await owner.mutation(createArtifact, args);

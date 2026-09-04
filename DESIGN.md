@@ -1,5 +1,5 @@
 ---
-name: CallBridge
+name: Concierge
 description: A ChatGPT-native conversation interface for bounded phone tasks.
 colors:
   ink: "#0d0d0d"
@@ -58,13 +58,13 @@ components:
     padding: "9px 9px 9px 16px"
 ---
 
-# Design System: CallBridge
+# Design System: Concierge
 
 ## Overview
 
 **Creative North Star: "The Quiet Task Thread"**
 
-CallBridge adopts the current ChatGPT web interaction language so the phone-task workflow feels native to an assistant conversation. The conversation owns the canvas; operational detail appears only as compact reasoning, tool, plan, approval, and activity elements.
+Concierge adopts the current ChatGPT web interaction language so the phone-task workflow feels native to an assistant conversation. The conversation owns the canvas; operational detail appears only as compact reasoning, tool, plan, approval, and activity elements.
 
 The system is neutral, flat, and information-led. It rejects dashboard density, oversized branding, decorative process diagrams, and clickable chrome without a real state or action.
 

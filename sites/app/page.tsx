@@ -17,7 +17,7 @@ function BrandMark() {
 function Header() {
   return (
     <header className="topbar">
-      <div className="brand"><BrandMark />CallBridge</div>
+      <div className="brand"><BrandMark />Concierge</div>
       <div className="chatgpt-status"><span className="status-dot" />Built for ChatGPT</div>
     </header>
   );
@@ -35,7 +35,7 @@ export default async function Home() {
       <main className="access-main">
         <section className="access-card">
           <p className="access-kicker">Private call tasks</p>
-          <h1>{user ? 'CallBridge is not configured' : 'Sign in to continue'}</h1>
+          <h1>{user ? 'Concierge is not configured' : 'Sign in to continue'}</h1>
           <p className="access-copy">
             ChatGPT can prepare and revise a controlled information-gathering call here.
             Only you can confirm it on this webpage.

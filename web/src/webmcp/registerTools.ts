@@ -74,7 +74,7 @@ export function callBridgeWebMcpTools(
     {
       name: "create_demo_call_draft",
       title: "Create a controlled live demo call",
-      description: "Create a judge-safe inquiry draft for Aurora Demo Hotel, an automated controlled recipient reached through the real phone network. Ask original information-only questions; CallBridge supplies the private destination, policy, disclosure, one-attempt limit, and demo credit. This never confirms or starts a call.",
+      description: "Create a judge-safe inquiry draft for Aurora Demo Hotel, an automated controlled recipient reached through the real phone network. Ask original information-only questions; Concierge supplies the private destination, policy, disclosure, one-attempt limit, and demo credit. This never confirms or starts a call.",
       inputSchema: inquiryToolInputSchemas.create_demo_call_draft,
       annotations: { readOnlyHint: false },
       execute: (input, options) => executeSafely(() => client.createDemoCallDraft(input as CreateDemoInquiryDraftInput, executionSignal(options))),

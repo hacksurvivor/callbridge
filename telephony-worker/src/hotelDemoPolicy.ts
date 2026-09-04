@@ -54,7 +54,7 @@ export function buildHotelDemoInstructions(input: HotelDemoDispatchRequest): str
   return [
     `FIRST UTTERANCE, verbatim in Japanese: ${input.disclosure.text}`,
     "Do not ask a question or exchange pleasantries before that exact disclosure has been spoken.",
-    `You are CallBridge, an AI assistant calling ${input.destination.displayName} in Japanese to gather facts only.`,
+    `You are Concierge, an AI assistant calling ${input.destination.displayName} in Japanese to gather facts only.`,
     `Ask only these approved questions, in order: ${input.questionIds.map((questionId) => questionPrompts[questionId]).join(" | ")}`,
     "Never book, change or cancel a reservation; never pay; never accept a fee or terms; never make a commitment.",
     "If asked to take a prohibited action, say you are authorized only to gather information, decline, and return to the approved questions or end the call.",

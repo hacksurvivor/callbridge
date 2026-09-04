@@ -142,20 +142,20 @@ export type InquiryWebMcpError = {
 };
 
 const ERROR_MESSAGES: Record<InquiryWebMcpErrorCode, string> = {
-  AUTH_REQUIRED: "Sign in to CallBridge to continue.",
+  AUTH_REQUIRED: "Sign in to Concierge to continue.",
   FORBIDDEN: "You do not have access to this call task.",
   NOT_FOUND: "The call task was not found.",
-  INVALID_INPUT: "The request does not match the CallBridge inquiry contract.",
+  INVALID_INPUT: "The request does not match the Concierge inquiry contract.",
   REVISION_CONFLICT: "The call draft changed. Read the current revision before trying again.",
   INVALID_STATE: "The call task is not in a state that allows this action.",
-  POLICY_DENIED: "The request exceeds CallBridge's information-only authority.",
-  CREDITS_REQUIRED: "Add enough CallBridge credits to cover the displayed spending limit.",
-  PRICING_REQUIRED: "CallBridge needs a fresh destination price before this call can be confirmed.",
+  POLICY_DENIED: "The request exceeds Concierge's information-only authority.",
+  CREDITS_REQUIRED: "Add enough Concierge credits to cover the displayed spending limit.",
+  PRICING_REQUIRED: "Concierge needs a fresh destination price before this call can be confirmed.",
   RATE_LIMITED: "This call is temporarily limited to protect users and recipients. Try again later.",
-  RECIPIENT_OPTED_OUT: "This recipient has asked CallBridge not to call this number again.",
+  RECIPIENT_OPTED_OUT: "This recipient has asked Concierge not to call this number again.",
   PLAYBOOK_APPROVAL_REQUIRED: "Approve this call playbook in the webpage before confirming.",
   UNSUPPORTED_ENVIRONMENT: "This browser does not support the required WebMCP interface.",
-  INTERNAL_ERROR: "CallBridge could not complete the request.",
+  INTERNAL_ERROR: "Concierge could not complete the request.",
 };
 
 const RETRYABLE_ERRORS = new Set<InquiryWebMcpErrorCode>([

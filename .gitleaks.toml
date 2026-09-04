@@ -1,4 +1,4 @@
-title = "CallBridge gitleaks configuration"
+title = "Concierge gitleaks configuration"
 
 [[allowlists]]
 description = "Local Convex runtime state is generated and gitignored"

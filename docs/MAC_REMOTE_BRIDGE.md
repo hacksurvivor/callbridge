@@ -1,6 +1,6 @@
 # Mac Remote Bridge
 
-CallBridge's first remote-agent proof runs on macOS. The iPhone is a remote
+Concierge's first remote-agent proof runs on macOS. The iPhone is a remote
 control; it does not execute agent tools.
 
 ## Runtime shape
@@ -30,7 +30,7 @@ runtime in this prototype.
   The host never launches Codex with an approval or sandbox bypass.
 - The host prompt also rejects calls, messages, email, payments, bookings,
   cancellations, publishing, deployment, account-security changes, and secret
-  disclosure. Existing CallBridge external-effect gates remain disabled and
+  disclosure. Existing Concierge external-effect gates remain disabled and
   independent of this bridge.
 - Commands expire after seven days, are idempotent per phone request ID, and
   support cancellation before or during execution.

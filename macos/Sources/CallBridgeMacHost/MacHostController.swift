@@ -23,7 +23,7 @@ final class MacHostController: ObservableObject {
             historyStore = store
             history = HistoryController(store: store)
         } catch {
-            fatalError("CallBridge could not initialize local history storage: \(error.localizedDescription)")
+            fatalError("Concierge could not initialize local history storage: \(error.localizedDescription)")
         }
 
         do {

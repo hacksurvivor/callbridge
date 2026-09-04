@@ -10,7 +10,7 @@ export type PushRegistration = {
 
 /**
  * Requests notification permission only when called from an explicit user
- * action. CallBridge never prompts during app startup or registers simulators.
+ * action. Concierge never prompts during app startup or registers simulators.
  */
 export async function requestExpoPushRegistration(): Promise<PushRegistration> {
   if (!Device.isDevice) throw new Error("Push registration requires a physical device");

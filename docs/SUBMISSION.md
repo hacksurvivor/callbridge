@@ -1,10 +1,10 @@
-# CallBridge — WebMCP Challenge submission
+# Concierge — WebMCP Challenge submission
 
 ## One-line story
 
 **The web has APIs. The rest of the world has phone numbers. Ask ChatGPT to call either.**
 
-CallBridge converts a natural-language request into a controlled multilingual
+Concierge converts a natural-language request into a controlled multilingual
 information-gathering phone call. ChatGPT prepares and revises the structured
 brief through WebMCP. The webpage keeps the consequential boundary: only the
 signed-in person can confirm the exact revision. The call runs once and returns
@@ -13,7 +13,7 @@ an evidence-bound result that ChatGPT can read and explain.
 ## Why WebMCP is essential
 
 Without WebMCP, ChatGPT can describe a call but cannot safely manipulate the
-authenticated, revisioned call task visible to the user. CallBridge exposes five
+authenticated, revisioned call task visible to the user. Concierge exposes five
 general artifact-free tools:
 
 - `create_call_draft`
@@ -40,14 +40,14 @@ bound to the exact execution revision and provider quote.
 3. Show WebMCP creating the complete visible brief.
 4. Review destination, questions, shareable context, authority, and ceiling;
    click **Confirm call** on the webpage.
-5. Show the disclosed real PSTN call between CallBridge and the controlled AI
+5. Show the disclosed real PSTN call between Concierge and the controlled AI
    hotel desk, including one intentionally unknown answer, and factual Activity.
 6. Show the translated answer and proof receipt; ask ChatGPT to explain it.
 7. Close with the eight-market fixture matrix to prove that the hotel is a demo,
    not a product boundary.
 
 The public judge flow requires no Twilio account, provider credentials, API key,
-or country-permission setup. CallBridge owns that infrastructure. Each judge
+or country-permission setup. Concierge owns that infrastructure. Each judge
 still reviews a fresh price and confirms one exact revision on the webpage.
 
 ## Proof boundaries

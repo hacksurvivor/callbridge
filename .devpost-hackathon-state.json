@@ -13,7 +13,7 @@
     "display_name": "Sergey Moloman"
   },
   "project": {
-    "name": "CallBridge",
+    "name": "Concierge",
     "summary": "ChatGPT makes the information-gathering phone call you do not want to make while the webpage keeps you in control.",
     "ai_usage": "ChatGPT as the WebMCP agent and OpenAI Realtime gpt-realtime-2.1-mini for the multilingual voice inquiry.",
     "codex_usage": "Codex collaborated on product design, WebMCP and telephony implementation, safety tests, responsive UI, browser QA, release gates, and submission preparation."

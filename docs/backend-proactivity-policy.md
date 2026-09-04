@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Enable CallBridge to become a useful personal concierge without becoming a noisy or presumptuous automation. This is server-side decision policy, not a frontend specification.
+Enable Concierge to become a useful personal concierge without becoming a noisy or presumptuous automation. This is server-side decision policy, not a frontend specification.
 
 **Service principle:** the concierge takes work off the person; it must never create new work, uncertainty, or avoidable interruptions for them.
 
@@ -16,7 +16,7 @@ Enable CallBridge to become a useful personal concierge without becoming a noisy
 - Notification delivery observes the user's quiet hours, defaulting to 22:00–08:00 in the user's time zone. A routine finding waits for the next allowed time; only a genuinely time-sensitive offer or an active call awaiting a decision may interrupt quiet hours, with the reason made explicit.
 - Notification preference and background-search preference are independent per category. Disabling notifications changes only delivery; disabling search stops future background research for that category.
 - It must not call, negotiate, reserve, purchase, place a hold, contact a seller, or otherwise commit merely because it found an opportunity.
-- The user explicitly chooses whether to pursue that exact proposal. The user may already have found a better option outside CallBridge.
+- The user explicitly chooses whether to pursue that exact proposal. The user may already have found a better option outside Concierge.
 - A user may explicitly authorize proactive follow-up for one important task while they are unavailable or asleep. That authorization is task-scoped and time-bounded: it states the goal and deadline, remains constrained by the target's local calling window, and permits only further inquiry or negotiation. It never permits payment, term acceptance, reservation, or another irreversible commitment.
 - For an already confirmed booking or purchase, proactive follow-up may verify known factual details such as a reference, date, pickup time, address, or availability. It may not change the commitment or introduce cost. The next morning's brief records what was confirmed, any mismatch, and every decision still needed from the user.
 - A confirmed booking or purchase is monitored only when the user marks it important or when it occurs within 48 hours. Older, ordinary commitments remain in history without background checking.

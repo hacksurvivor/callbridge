@@ -34,11 +34,11 @@ export function Header({
         {onOpenNavigation ? <button className="icon-button mobile-only" type="button" onClick={onOpenNavigation} aria-label="Open conversations"><MenuIcon /></button> : null}
         <Popover.Root open={assistantMenuOpen} onOpenChange={(open) => { setAssistantMenuOpen(open); if (open) setMoreMenuOpen(false); }}>
           <Popover.Trigger asChild>
-            <button className="model-switcher" type="button" aria-label="Current assistant: CallBridge">CallBridge <ChevronDownIcon /></button>
+            <button className="model-switcher" type="button" aria-label="Current assistant: Concierge">Concierge <ChevronDownIcon /></button>
           </Popover.Trigger>
           <Popover.Portal>
             <Popover.Content className="topbar-popover assistant-popover" align="start" sideOffset={6}>
-              <strong>CallBridge</strong>
+              <strong>Concierge</strong>
               <p>Prepares one bounded phone task and waits for your explicit approval.</p>
             </Popover.Content>
           </Popover.Portal>

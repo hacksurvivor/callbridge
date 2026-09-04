@@ -1263,7 +1263,7 @@ export const recordWorkerEvent = internalMutation({
           taskId: task._id,
           attemptId: attempt._id,
           source: "recipient_declined",
-          reason: "Recipient declined future CallBridge contact during the call.",
+          reason: "Recipient declined future Concierge contact during the call.",
           optedOutAt: args.occurredAt,
         });
       }

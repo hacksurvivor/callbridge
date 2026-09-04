@@ -59,10 +59,10 @@ function SidebarContent({
   return (
     <aside className="relay-sidebar" aria-label="Conversations and task media">
       <div className="sidebar-brand-row">
-        <div className="sidebar-brand"><span><CallBridgeIcon /></span><strong>CallBridge</strong></div>
+        <div className="sidebar-brand"><span><CallBridgeIcon /></span><strong>Concierge</strong></div>
         <button className="icon-button mobile-only" type="button" onClick={onClose} aria-label="Close conversations"><CloseIcon /></button>
       </div>
-      <nav className="sidebar-primary-nav" aria-label="CallBridge navigation">
+      <nav className="sidebar-primary-nav" aria-label="Concierge navigation">
         <button className="sidebar-nav-button" type="button" onClick={() => { onNewTask(); onClose?.(); }}><PlusIcon /><span>New task</span></button>
         <button className="sidebar-nav-button" type="button" aria-expanded={searchOpen} onClick={() => { setSearchOpen((value) => !value); setSearchQuery(""); }}><SearchIcon /><span>Search chats</span></button>
         <button className="sidebar-nav-button" type="button" onClick={onOpenGallery} disabled={!media.length}><GalleryIcon /><span>Images</span><small>{media.length || ""}</small></button>

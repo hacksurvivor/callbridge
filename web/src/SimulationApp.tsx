@@ -85,7 +85,7 @@ export function SimulationApp({ visualFixture }: { visualFixture?: "approved" | 
       }, new AbortController().signal);
       setConfirmation({ state: "idle" });
     } catch {
-      setConfirmation({ state: "error", message: "CallBridge could not save this draft." });
+      setConfirmation({ state: "error", message: "Concierge could not save this draft." });
     }
   };
 
@@ -114,7 +114,7 @@ export function SimulationApp({ visualFixture }: { visualFixture?: "approved" | 
             objective,
             questions: [{ id: "primary-request", prompt: objective, required: true }],
             context: {
-              privateBackground: "Created by the user from the CallBridge task composer.",
+              privateBackground: "Created by the user from the Concierge task composer.",
               shareableFacts: [],
             },
             playbook: undefined,

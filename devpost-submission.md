@@ -1,8 +1,8 @@
-# CallBridge
+# Concierge
 
 ## One-line Summary
 
-**The web has APIs. The rest of the world has phone numbers. CallBridge lets
+**The web has APIs. The rest of the world has phone numbers. Concierge lets
 ChatGPT make the inquiry call you do not want to make while the webpage keeps
 you in control.**
 
@@ -22,11 +22,11 @@ the inconvenience by creating a larger trust problem.
 
 ## Solution
 
-CallBridge turns a natural-language request into a controlled, multilingual
+Concierge turns a natural-language request into a controlled, multilingual
 information-gathering phone call.
 
 ChatGPT uses WebMCP to create and revise a structured call plan on the signed-in
-CallBridge page. The person sees the destination, questions, context, languages,
+Concierge page. The person sees the destination, questions, context, languages,
 authority boundary, price ceiling, and exact revision. Only the person can press
 **Confirm one call**. Confirmation is deliberately absent from the WebMCP tool
 catalog.
@@ -34,16 +34,16 @@ catalog.
 The disclosed voice agent conducts one bounded inquiry, handles interruptions
 and corrections, avoids repeating resolved questions, and asks at most one
 clarification when an answer is incomplete. It cannot book, purchase, cancel,
-accept a fee, or make a commitment. CallBridge returns a translated summary,
+accept a fee, or make a commitment. Concierge returns a translated summary,
 per-question answer status, evidence excerpts, duration, provider-reported cost,
 disclosure status, and a one-attempt receipt. ChatGPT can then retrieve and
 explain that result through WebMCP.
 
 The user never configures Twilio, OpenAI credentials, calling countries, or API
-keys. CallBridge owns the provider infrastructure; each call still requires a
+keys. Concierge owns the provider infrastructure; each call still requires a
 fresh visible quote and exact human confirmation.
 
-For repeatable judging, CallBridge also provides **Aurora Demo Hotel**, an
+For repeatable judging, Concierge also provides **Aurora Demo Hotel**, an
 explicitly fictional automated test desk reached through the real phone
 network. Judges can ask original questions. The recipient answers only from a
 versioned server-owned fact sheet, says when information is unavailable, and
@@ -52,7 +52,7 @@ without repeatedly disturbing a real business.
 
 ## Why This Matters
 
-CallBridge makes agents useful beyond websites without hiding consequential
+Concierge makes agents useful beyond websites without hiding consequential
 actions from people. It creates a practical boundary between agent preparation
 and human authority:
 
@@ -130,7 +130,7 @@ external effects, candidate commits, deployments, and every real call.
 
 1. **ChatGPT in-app browser** invokes five general tools plus one controlled
    demo creator registered through
-   `document.modelContext.registerTool` on the CallBridge page.
+   `document.modelContext.registerTool` on the Concierge page.
 2. **React/Vite** renders the shared human-agent workspace, confirmation boundary,
    live Activity, and evidence-bound result.
 3. **ChatGPT OAuth or WorkOS AuthKit** establishes the user's identity. The
@@ -162,7 +162,7 @@ handles temporary live audio. Only the webpage can confirm or stop a call.
 7. Watch the factual live Activity and, when complete, ask ChatGPT to retrieve
    and explain the result.
 
-For judging safety, use the prefilled controlled destination unless the CallBridge
+For judging safety, use the prefilled controlled destination unless the Concierge
 team has explicitly coordinated another consenting recipient. Do not use an
 emergency number or request a purchase, booking, cancellation, payment, legal
 commitment, medical decision, or other consequential action.
@@ -209,7 +209,7 @@ candidate passes both final canaries.
 
 ## Screenshot Shot List
 
-1. ChatGPT and CallBridge side-by-side with a WebMCP-created plan.
+1. ChatGPT and Concierge side-by-side with a WebMCP-created plan.
 2. Exact call brief with language, scope, forbidden actions, quote, revision, and
    **Confirm one call**.
 3. Live Activity during the disclosed call.
@@ -225,7 +225,7 @@ candidate passes both final canaries.
   location or phone number.
 - **Organization (28251):** Not applicable unless the user specifies one.
 - **App Status (28252):** Existing.
-- **Existing-project update (28253):** CallBridge began as a mobile-first
+- **Existing-project update (28253):** Concierge began as a mobile-first
   call-avoidance prototype before the challenge. During the submission period we
   built the web-first WebMCP application: five authenticated general task tools,
   one controlled-recipient demo creator, visible exact-revision human

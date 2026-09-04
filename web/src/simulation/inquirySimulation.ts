@@ -255,7 +255,7 @@ export function beginSimulationArtifactFixture(): TaskArtifact {
   const artifact = makeArtifact({
     type: "auth_required",
     providerId: "callbridge_demo",
-    providerName: "CallBridge controlled provider",
+    providerName: "Concierge controlled provider",
     reason: "This labeled fixture requires a protected authorization handoff before the provider message is revealed.",
     state: "required",
     continuation: "open_secure_browser",
@@ -282,7 +282,7 @@ export function completeSimulationArtifactAuthorization(artifactId: string): voi
     channel: "web_chat",
     title: "Controlled provider conversation",
     participants: [
-      { id: "callbridge-agent", displayName: "CallBridge", role: "agent" },
+      { id: "callbridge-agent", displayName: "Concierge", role: "agent" },
       { id: "fixture-provider", displayName: "Controlled provider", role: "provider" },
     ],
     latestMessages: [{
@@ -299,7 +299,7 @@ export function completeSimulationArtifactAuthorization(artifactId: string): voi
   });
   const question = makeArtifact({
     type: "user_question",
-    prompt: "What arrival window should CallBridge share with the provider?",
+    prompt: "What arrival window should Concierge share with the provider?",
     responseMode: "single_choice",
     options: [
       { id: "before-midnight", label: "Before midnight" },

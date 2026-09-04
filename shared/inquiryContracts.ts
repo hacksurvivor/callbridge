@@ -46,7 +46,7 @@ const SERVER_DISCLOSURES: Readonly<Record<string, string>> = {
   th: "นี่คือผู้ช่วย AI ที่โทรในนามของผู้ใช้ ระบบถอดเสียงการสนทนา ไม่มีการบันทึกเสียง และเก็บหลักฐานแบบมีโครงสร้างเท่าที่จำเป็นไว้ชั่วคราว",
 };
 
-/** User input never controls the words spoken as CallBridge's legal/safety disclosure. */
+/** User input never controls the words spoken as Concierge's legal/safety disclosure. */
 export function serverInquiryDisclosure(callLanguage: string): {
   id: string;
   locale: string;
@@ -148,7 +148,7 @@ const policySchema = z
       context.addIssue({
         code: "custom",
         path: ["forbiddenActions"],
-        message: "The complete CallBridge forbidden-action boundary is required",
+        message: "The complete Concierge forbidden-action boundary is required",
       });
     }
   });
@@ -202,7 +202,7 @@ export const inquiryCallContractSchema = z
       context.addIssue({
         code: "custom",
         path: ["disclosure", "requiredClaims"],
-        message: "The complete CallBridge disclosure envelope is required",
+        message: "The complete Concierge disclosure envelope is required",
       });
     }
   })

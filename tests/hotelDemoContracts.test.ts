@@ -80,7 +80,7 @@ describe("hotel demo shared contract", () => {
     const result = toWebMcpError(new Error("Twilio credential abc123 failed"));
     expect(result).toEqual({
       code: "INTERNAL_ERROR",
-      message: "CallBridge could not complete the request.",
+      message: "Concierge could not complete the request.",
       retryable: true,
     });
     expect(result.message).not.toContain("Twilio");

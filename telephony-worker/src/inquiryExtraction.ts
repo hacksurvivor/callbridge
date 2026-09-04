@@ -5,7 +5,7 @@ export const INQUIRY_EXTRACTION_PROMPT_VERSION = "inquiry-result-v1" as const;
 
 export function formatInquiryTranscript(turns: readonly { speaker: "provider" | "callbridge"; text: string }[]): string {
   return turns
-    .map(({ speaker, text }) => `${speaker === "provider" ? "Provider" : "CallBridge"}: ${text}`)
+    .map(({ speaker, text }) => `${speaker === "provider" ? "Provider" : "Concierge"}: ${text}`)
     .join("\n")
     .slice(0, 80_000);
 }
@@ -59,7 +59,7 @@ export function buildInquiryExtractionRequest(input: {
         role: "system",
         content: [{
           type: "input_text",
-          text: "Return exactly one answer for every approved question. Extract only facts explicitly stated by the Provider. Never infer availability, price, terms, completion, or success. Use reported only for a direct, definite answer. Use ambiguous when the Provider hedges, says sometimes/may/might/depends, asks the caller to confirm elsewhere, or otherwise leaves the answer conditional or uncertain. When a Provider explicitly corrects an earlier statement, use the latest correction and do not preserve the superseded value. For reported or ambiguous answers, sourceExcerpt must be an exact contiguous quote copied from one Provider turn in the transcript; quoting the entire relevant Provider turn is valid. Translate value into the target language. For not_answered, value and sourceExcerpt must be null. Mark possibleCommitmentViolation only if CallBridge itself audibly booked, changed, cancelled, paid, accepted a fee or terms, or made another commitment. Set recipientRequestedNoFurtherCalls only when the Provider explicitly asks CallBridge not to call this number again; do not infer it from declining the current inquiry or ending the call.",
+          text: "Return exactly one answer for every approved question. Extract only facts explicitly stated by the Provider. Never infer availability, price, terms, completion, or success. Use reported only for a direct, definite answer. Use ambiguous when the Provider hedges, says sometimes/may/might/depends, asks the caller to confirm elsewhere, or otherwise leaves the answer conditional or uncertain. When a Provider explicitly corrects an earlier statement, use the latest correction and do not preserve the superseded value. For reported or ambiguous answers, sourceExcerpt must be an exact contiguous quote copied from one Provider turn in the transcript; quoting the entire relevant Provider turn is valid. Translate value into the target language. For not_answered, value and sourceExcerpt must be null. Mark possibleCommitmentViolation only if Concierge itself audibly booked, changed, cancelled, paid, accepted a fee or terms, or made another commitment. Set recipientRequestedNoFurtherCalls only when the Provider explicitly asks Concierge not to call this number again; do not infer it from declining the current inquiry or ending the call.",
         }],
       },
       {

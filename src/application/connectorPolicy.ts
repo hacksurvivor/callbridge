@@ -17,6 +17,6 @@ const ALLOWED: Readonly<Record<ConnectorProvider, readonly ConnectorAction[]>> =
 
 export function assertConnectorActionAllowed(provider: ConnectorProvider, action: ConnectorAction): void {
   if (!ALLOWED[provider].includes(action)) {
-    throw new Error(`${provider} cannot perform ${action} in the current CallBridge scope`);
+    throw new Error(`${provider} cannot perform ${action} in the current Concierge scope`);
   }
 }

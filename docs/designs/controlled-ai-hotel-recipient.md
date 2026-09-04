@@ -9,7 +9,7 @@ Supersedes: mac-codex-callbridge-webmcp-design-audit-20260903-1303.md
 
 ## Problem Statement
 
-CallBridge needs a repeatable, judge-visible end-to-end call that proves the
+Concierge needs a repeatable, judge-visible end-to-end call that proves the
 complete WebMCP-to-phone-to-evidence loop. Calling a real hotel for every judge
 run would disturb staff, make debugging unpredictable, introduce privacy and
 consent problems, and leave the final demo dependent on a stranger answering at
@@ -18,14 +18,14 @@ the right time.
 A purely scripted browser simulation would be reliable but would weaken the
 product's central claim. The important proof is not that two text agents can
 exchange messages. It is that ChatGPT can prepare an authenticated task through
-WebMCP, a person can approve one exact call on the webpage, CallBridge can cross
+WebMCP, a person can approve one exact call on the webpage, Concierge can cross
 the real telephone network, and the answer can return as evidence rather than a
 fabricated summary.
 
 ## What Makes This Cool
 
 The judge can ask an original question, not select a prepared script. ChatGPT
-turns it into a visible call plan, the judge confirms it, and CallBridge calls a
+turns it into a visible call plan, the judge confirms it, and Concierge calls a
 real phone number. On the other end, a clearly disclosed AI receptionist for a
 fictional hotel answers from a fixed, testable fact sheet. The calling agent must
 listen, handle interruption, avoid repeating resolved questions,
@@ -54,7 +54,7 @@ only the safe recipient used to prove it.
 - The calling agent delivers its normal AI/transcription disclosure. The demo
   receptionist acknowledges it naturally and identifies itself as an automated
   test desk.
-- The demo line is private infrastructure. Judges trigger it through CallBridge;
+- The demo line is private infrastructure. Judges trigger it through Concierge;
   its telephone number is not displayed or published.
 - The receiver is isolated from the stable outbound session. A receiver fault
   cannot silently change the calling agent's authority, result contract, or
@@ -77,11 +77,11 @@ only the safe recipient used to prove it.
 
 ## Premises
 
-1. The controlled hotel is a recipient fixture, not CallBridge's market wedge.
+1. The controlled hotel is a recipient fixture, not Concierge's market wedge.
 2. A real PSTN hop matters because “the web has APIs; the rest of the world has
    phone numbers” is the product's memorable claim.
 3. Transparency makes the demo stronger: judges should know the receiver is an
-   AI and then judge whether CallBridge can converse with it correctly.
+   AI and then judge whether Concierge can converse with it correctly.
 4. The receptionist's fixed facts make correctness measurable while still
    allowing judges to formulate their own questions.
 5. The proof is the observable loop: WebMCP plan, human confirmation, one real
@@ -91,7 +91,7 @@ only the safe recipient used to prove it.
 
 ## Approaches Considered
 
-### Approach A: Scripted receiver inside CallBridge
+### Approach A: Scripted receiver inside Concierge
 
 Return predetermined events and evidence without a telephone call. This is the
 fastest and most reliable approach, but it proves UI orchestration rather than
@@ -101,11 +101,11 @@ could reasonably describe it as simulation theater.
 ### Approach B: Dedicated real PSTN AI hotel receptionist
 
 Assign one temporary controlled destination to a separate inbound voice route.
-The normal CallBridge worker calls that E.164 number. Twilio ConversationRelay
+The normal Concierge worker calls that E.164 number. Twilio ConversationRelay
 handles the receiver's live speech recognition, speech synthesis, and interruption
 events. One isolated Durable Object owns admission, the single active receiver
 session, the closed fact lookup, and terminal cleanup. Both sides use real carrier
-media, but only the outbound CallBridge side produces the user's task evidence and
+media, but only the outbound Concierge side produces the user's task evidence and
 result.
 
 This reuses the current outbound call, confirmation, extraction, callback, and
@@ -315,7 +315,7 @@ field.
 - One singleton receiver Durable Object combines the admission gate, daily counters,
   and the only active ConversationRelay session; it remains separate from `CallSession`.
 - Verify Twilio webhook signatures before returning streaming TwiML.
-- Accept the demo flow only for the configured destination, expected CallBridge
+- Accept the demo flow only for the configured destination, expected Concierge
   caller ID, and matching cost-backed admission; reject every other call with
   provider `<Reject>` before media or speech.
 - Keep the destination number out of page source, application logs, screenshots,
@@ -340,7 +340,7 @@ field.
 
 ### Data handling
 
-- No audio is recorded by CallBridge.
+- No audio is recorded by Concierge.
 - Caller audio and text are forwarded only during the active receiver session.
 - The receiver persists no raw caller transcript or shareable context. It stores
   only `CallSid` hash, fact-sheet revision, returned `factId` values, timestamps,
@@ -421,7 +421,7 @@ before any purchase or dashboard mutation.
 
 ## Distribution Plan
 
-The existing CallBridge deployment remains the product surface. The controlled
+The existing Concierge deployment remains the product surface. The controlled
 recipient is challenge infrastructure configured server-side and is never exposed
 as a standalone consumer product. The existing exact-candidate deployment and
 release gates cover the browser, Convex backend, telephony worker, public Site,
@@ -449,7 +449,7 @@ and fallback URL.
 - You immediately connected the safe recipient to debugging. That turns a
   hackathon trick into reusable quality infrastructure.
 - You kept the real product general: the hotel is where we prove the call, not a
-  restriction on what CallBridge can do.
+  restriction on what Concierge can do.
 
 ## The Assignment
 
@@ -487,7 +487,7 @@ Fall back to the existing controlled human canary and finish video/submission.
    `InquiryRealtimeController`, owns Twilio media events, and opens another provider
    socket. Copying this path would recreate the failure surface that already caused
    silent/hangup canary failures. Selected: ConversationRelay for receiver STT, TTS,
-   and interruption events; CallBridge owns only text classification and state.
+   and interruption events; Concierge owns only text classification and state.
 
 2. **[P1] (confidence: 9/10) Use one receiver Durable Object.**
    `telephony-worker/wrangler.jsonc:19-25` currently binds one `CallSession` class,

@@ -1,4 +1,4 @@
-# CallBridge release acceptance
+# Concierge release acceptance
 
 The product boundary is a user-authored, information-only phone inquiry. The
 hotel flow is one repeatable demo fixture, not a vertical restriction.
@@ -42,7 +42,7 @@ Earlier 2026-09-03 checkpoint:
   Convex runtime state.
 - Current production dependency audits report zero known vulnerabilities. The
   six direct runtime packages declare permissive licenses: Apache-2.0, MIT, or
-  ISC; CallBridge itself now carries a root MIT license.
+  ISC; Concierge itself now carries a root MIT license.
 - The production bundle contained the five inquiry tools and none of the three
   task-artifact tool names or artifact fixture surface.
 - Target-browser dynamic abort/re-registration could not be proven because the
@@ -57,7 +57,7 @@ Earlier 2026-09-03 checkpoint:
   IDs diverge, when their Convex URLs diverge, or when the callback is not
   exactly `https://callbridge-web.pages.dev/callback`. This protects the email
   fallback configuration; the primary judge path uses ChatGPT sign-in and the
-  versioned CallBridge token bridge.
+  versioned Concierge token bridge.
 
 This is code-gate evidence only. Promotion still requires a committed/deployed
 candidate, an authenticated target-browser WebMCP smoke on that deployment, two
