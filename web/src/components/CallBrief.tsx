@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent, type MouseEventHandler } from "react";
+import { useEffect, useState, type FormEvent, type MouseEventHandler } from "react";
 
 import type { InquiryCallContract } from "../../../shared/inquiryContracts.js";
 import type { InquiryTaskSnapshot, InquiryTaskStatus } from "../../../shared/inquiryState.js";
@@ -113,7 +113,6 @@ export function CallBrief({
   const [reviewing, setReviewing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const approvalRef = useRef<HTMLDivElement>(null);
   const [objective, setObjective] = useState(contract.objective);
   const [questions, setQuestions] = useState(contract.questions.map(({ prompt }) => prompt).join("\n"));
   const [privateBackground, setPrivateBackground] = useState(contract.context.privateBackground ?? "");
@@ -137,14 +136,6 @@ export function CallBrief({
     setEditing(false);
     setReviewing(false);
   }, [editable]);
-
-  useEffect(() => {
-    if (!reviewing || !presentation.editable) return;
-    const frame = window.requestAnimationFrame(() => {
-      approvalRef.current?.scrollIntoView({ block: "center" });
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [presentation.editable, reviewing]);
 
   const save = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -181,7 +172,7 @@ export function CallBrief({
           <span className={`plan-state-label ${presentation.editable ? "is-approval" : ""}`}>{presentation.kicker}</span>
         </div>
         {reviewing && presentation.editable ? (
-          <div ref={approvalRef} className="callbridge-approval-wrap" role="region" aria-label="Final confirmation">
+          <div className="callbridge-approval-wrap" role="region" aria-label="Final confirmation">
             <ApprovalCard
               state={approvalState}
               title={`Place one call to ${contract.destination.displayName}?`}
@@ -191,7 +182,7 @@ export function CallBrief({
               allowOnceLabel="Confirm one call"
               onDeny={() => setReviewing(false)}
               {...(!confirmationDisabled && onConfirm ? { onAllowOnce: onConfirm } : {})}
-              className="max-w-none"
+              className="callbridge-approval-card max-w-none"
             />
           </div>
         ) : null}
@@ -258,7 +249,7 @@ export function CallBrief({
         ) : null}
         {!presentation.editable || (!reviewing && !editing) ? (
           <div className="brief-footer">
-            <p className="approval-copy">{presentation.footerDetail(revision)}</p>
+            {presentation.editable ? <p className="approval-copy">{presentation.footerDetail(revision)}</p> : null}
             <div className="brief-actions">
               {editable ? <button className="button secondary" type="button" onClick={() => { setReviewing(false); setEditing(true); }}>Edit</button> : null}
               <button className={presentation.editable ? "button primary" : "button secondary"} type="button" disabled={presentation.editable && confirmationDisabled} onClick={() => setReviewing((value) => !value)}>{reviewing ? "Close" : presentation.editable ? "Review and confirm" : "View details"}</button>

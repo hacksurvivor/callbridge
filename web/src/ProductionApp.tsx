@@ -1,6 +1,6 @@
 import { ConvexProviderWithAuthKit } from "@convex-dev/workos";
 import { AuthKitProvider, useAuth } from "@workos-inc/authkit-react";
-import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { ConvexReactClient, useConvex, useConvexAuth } from "convex/react";
 
 import { INQUIRY_CONTRACT_SCHEMA_VERSION, type InquiryCallContract } from "../../shared/inquiryContracts.js";
@@ -99,8 +99,15 @@ export function LiveWorkspace() {
   const [confirmation, setConfirmation] = useState<ConfirmationUiState>({ state: "idle" });
   const [preparedIntent, setPreparedIntent] = useState<PreparedConfirmationIntent | null>(null);
   const [recentTasks, setRecentTasks] = useState<RecentTask[]>([]);
+  const activeTaskIdRef = useRef<string | null>(null);
 
   const acceptDraft = useCallback((next: InquiryTaskSnapshot) => {
+    if (activeTaskIdRef.current !== next.taskId) {
+      activeTaskIdRef.current = next.taskId;
+      setActivity([]);
+      setResult({ status: "not_ready" });
+      setRefreshHealth({ state: "current", lastUpdatedAt: null });
+    }
     setDraft(next);
     setLiveStatus(next.status);
     setPreparedIntent(null);

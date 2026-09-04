@@ -25,7 +25,7 @@ import { ArtifactRegistry } from "./components/ArtifactRegistry.js";
 import { AssistantThread } from "./components/AssistantThread.js";
 import { CallBrief } from "./components/CallBrief.js";
 import { Header } from "./components/Header.js";
-import { ContextPanel, InThreadTimeline, type ContextPanelMode } from "./components/RelayPanels.js";
+import { ContextPanel, type ContextPanelMode } from "./components/RelayPanels.js";
 import { RelaySidebar, taskMediaFromArtifacts, type RecentTask } from "./components/RelaySidebar.js";
 import { ResultSummary } from "./components/ResultSummary.js";
 import { TaskStart } from "./components/TaskStart.js";
@@ -61,13 +61,11 @@ function categoryLabel(category: string): string {
 }
 
 function assistantCopy(status: InquiryTaskStatus, destination: string, result: GetInquiryResultOutput): string {
-  if (result.status === "ready") return `The evidence-bound result for ${destination} is ready below. I kept facts separate from raw provider data and hidden reasoning.`;
-  if (result.status === "processing") return "The call has ended. I’m checking the accepted evidence before presenting a factual result.";
-  if (status === "confirmed") return `The approved task for ${destination} is queued for one controlled attempt. Automatic retry remains disabled.`;
-  if (status === "in_progress") {
-    return `The approved task for ${destination} is in progress. Factual milestones will stream into the timeline as they are recorded.`;
-  }
-  return `I prepared an information-only call plan for ${destination}. Review the exact questions, shareable facts, authority limits, and price before confirming this revision.`;
+  if (result.status === "ready") return `The result from ${destination} is ready.`;
+  if (result.status === "processing") return "The call ended. I’m verifying the result.";
+  if (status === "confirmed") return `Approved. One call to ${destination} is queued.`;
+  if (status === "in_progress") return `Calling ${destination} now.`;
+  return "Review the call plan, then confirm when you’re ready.";
 }
 
 const transportMessageConverter = createMessageConverter((message: CallBridgeTransportMessage): ThreadMessageLike => ({
@@ -133,7 +131,6 @@ export default function App({
   const media = useMemo(() => taskMediaFromArtifacts(artifacts), [artifacts]);
   const destination = draft.contract.destination.displayName;
   const category = categoryLabel(draft.contract.category);
-  const isStreaming = confirmation.state === "pending" || result.status === "processing";
   const confirmationDisabled = !confirmationReady || confirmation.state === "pending" || confirmation.state === "confirmed"
     || status !== "draft" && status !== "awaiting_confirmation";
 
@@ -165,31 +162,15 @@ export default function App({
       createdAt: draft.createdAt,
       content: [{ type: "text", text: draft.contract.objective }],
     }, {
-      id: `${draft.taskId}:assistant:${draft.revision}:${status}:${result.status}`,
+      // Polling changes factual state, not conversational history. Keeping one
+      // mounted assistant turn prevents entrance-animation and scroll jitter.
+      id: `${draft.taskId}:assistant`,
       role: "assistant",
-      createdAt: draft.updatedAt,
-      content: [
-        { type: "reasoning", text: "Checked the exact revision, destination, questions, context channels, authority limits, and confirmation boundary.", status: isStreaming ? { type: "running" } : { type: "complete" } },
-        {
-          type: "tool-call",
-          toolCallId: `read-call-draft-${draft.revision}`,
-          toolName: "read_call_draft",
-          args: { revision: draft.revision },
-          ...(!isStreaming ? { result: { status, revision: draft.revision } } : {}),
-        },
-        { type: "text", text: assistantCopy(status, destination, result), status: isStreaming ? { type: "running" } : { type: "complete" } },
-        ...(draft.contract.destination.website ? [{
-          type: "source" as const,
-          sourceType: "url" as const,
-          id: `${draft.taskId}:destination-source`,
-          url: draft.contract.destination.website,
-          title: draft.contract.destination.displayName,
-          status: { type: "complete" as const },
-        }] : []),
-      ],
-      status: isStreaming ? { type: "running" } : { type: "complete", reason: "stop" },
+      createdAt: draft.createdAt,
+      content: [{ type: "text", text: assistantCopy(status, destination, result), status: { type: "complete" } }],
+      status: { type: "complete", reason: "stop" },
     }],
-  }), [destination, draft.contract.objective, draft.createdAt, draft.revision, draft.taskId, draft.updatedAt, isStreaming, result, status]);
+  }), [destination, draft.contract.objective, draft.createdAt, draft.taskId, result, status]);
 
   const transportStateRef = useRef<{ taskId: string; state: CallBridgeTransportState }>({
     taskId: draft.taskId,
@@ -200,7 +181,7 @@ export default function App({
   } else {
     const conversationMessages = transportStateRef.current.state.messages.filter((message) => (
       message.id !== `${draft.taskId}:request`
-      && !message.id.startsWith(`${draft.taskId}:assistant:`)
+      && !message.id.startsWith(`${draft.taskId}:assistant`)
     ));
     transportStateRef.current.state = {
       ...transportStateRef.current.state,
@@ -306,7 +287,6 @@ export default function App({
               />
             ) : <main className="conversation-main">
               <AssistantThread>
-                <InThreadTimeline events={activity} snapshot={draft} status={status} onOpenActivity={() => setContextPanel("activity")} />
                 <ArtifactRegistry artifacts={artifacts} {...(onArtifactAnswer ? { onAnswer: onArtifactAnswer } : {})} {...(onArtifactAuthorize ? { onAuthorize: onArtifactAuthorize } : {})} />
                 <CallBrief
                   approvalState={confirmation.state === "pending" ? "running" : confirmation.state === "confirmed" ? "done" : "request"}
@@ -319,7 +299,7 @@ export default function App({
                 {transportSaveError ? <p className="confirmation-message error" role="alert">{transportSaveError}</p> : null}
                 {confirmation.state !== "idle" && (confirmation.state !== "confirmed" || status === "confirmed") ? <p className={`confirmation-message ${confirmation.state}`} role="status">{confirmation.message}</p> : null}
                 {refreshHealth.state === "degraded" ? <section className="result-state error" role="alert"><span>Live updates paused</span><strong>Concierge could not refresh the task twice in a row.</strong><small>{refreshHealth.lastUpdatedAt ? `Last factual update ${new Date(refreshHealth.lastUpdatedAt).toLocaleTimeString()}. Reload to reconnect.` : "Reload this page to reconnect. No result has been invented."}</small></section> : null}
-                {result.status === "processing" ? <section className="result-state" role="status"><span className="stream-pulse" /><strong>Checking accepted call evidence…</strong></section> : null}
+                {result.status === "processing" ? <p className="quiet-status" role="status">Verifying the call result…</p> : null}
                 {result.status === "failed" ? <section className="result-state error" role="alert"><span>Result unavailable</span><strong>The call evidence could not be projected safely.</strong><small>No answer was invented and automatic retry is disabled.</small></section> : null}
                 {result.status === "ready" ? <ResultSummary questions={draft.contract.questions} output={result} /> : null}
               </AssistantThread>

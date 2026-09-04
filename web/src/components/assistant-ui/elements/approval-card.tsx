@@ -44,8 +44,8 @@ export function ApprovalCard({
           {onDeny && <button type="button" onClick={onDeny} className="text-foreground/55 hover:bg-foreground/[0.06] hover:text-foreground/90 h-8 rounded-full px-3.5 text-xs font-medium transition-[background-color,color,scale] duration-150 active:scale-[0.96]">{denyLabel}</button>}
           {onAlwaysAllow && <button type="button" onClick={onAlwaysAllow} className="text-foreground/55 hover:bg-foreground/[0.06] hover:text-foreground/90 h-8 rounded-full px-3.5 text-xs font-medium transition-[background-color,color,scale] duration-150 active:scale-[0.96]">{alwaysAllowLabel}</button>}
           {onAllowOnce && <button type="button" onClick={onAllowOnce} className={cn(inkButton, "flex h-8 items-center rounded-full px-3.5 text-xs font-medium")}>{allowOnceLabel}</button>}
-        </> : <div key={state} className="fade-in animate-in text-foreground/55 flex items-center gap-2 text-xs duration-300">
-          {state === "running" ? <><Loader2Icon className="text-foreground/45 size-3.5 animate-spin" />Approved, running</> : state === "denied" ? <><XIcon className="text-foreground/45 size-3.5" />Denied</> : <><CheckIcon className="size-3.5 text-emerald-500" />Complete</>}
+        </> : <div key={state} className="text-foreground/55 flex items-center gap-2 text-xs">
+          {state === "running" ? <><Loader2Icon className="text-foreground/45 size-3.5" />Recording approval</> : state === "denied" ? <><XIcon className="text-foreground/45 size-3.5" />Denied</> : <><CheckIcon className="size-3.5 text-emerald-500" />Complete</>}
         </div>}
       </div>
     </div>
