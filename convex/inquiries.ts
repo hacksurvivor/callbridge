@@ -28,6 +28,7 @@ const CONFIRMATION_TTL_MS = 5 * 60 * 1_000;
 const ABUSE_WINDOW_MS = 24 * 60 * 60 * 1_000;
 const MAX_CALLS_PER_USER_WINDOW = 10;
 const MAX_CALLS_PER_DESTINATION_WINDOW = 3;
+const MAX_CONTROLLED_DEMO_CALLS_PER_USER_WINDOW = 20;
 const MAX_CONTROLLED_DEMO_CALLS_PER_DESTINATION_WINDOW = 10;
 const ACTIVE_ATTEMPT_STATUSES = ["queued", "dialing", "connected", "ending"] as const;
 
@@ -353,6 +354,12 @@ async function requireDestinationSafety(
 
   const cutoff = new Date(Date.now() - ABUSE_WINDOW_MS).toISOString();
   const countedDispatchStates = ["accepted", "creation_uncertain"] as const;
+  const userWindowLimit = controlledDemo
+    ? MAX_CONTROLLED_DEMO_CALLS_PER_USER_WINDOW
+    : MAX_CALLS_PER_USER_WINDOW;
+  const destinationWindowLimit = controlledDemo
+    ? MAX_CONTROLLED_DEMO_CALLS_PER_DESTINATION_WINDOW
+    : MAX_CALLS_PER_DESTINATION_WINDOW;
   const ownerWindows = await Promise.all(countedDispatchStates.map((dispatchState) => (
     ctx.db
       .query("inquiryAttempts")
@@ -360,11 +367,8 @@ async function requireDestinationSafety(
         .eq("ownerId", ownerId)
         .eq("dispatchState", dispatchState)
         .gte("createdAt", cutoff))
-      .take(MAX_CALLS_PER_USER_WINDOW)
+      .take(userWindowLimit)
   )));
-  const destinationWindowLimit = controlledDemo
-    ? MAX_CONTROLLED_DEMO_CALLS_PER_DESTINATION_WINDOW
-    : MAX_CALLS_PER_DESTINATION_WINDOW;
   const destinationWindows = await Promise.all(countedDispatchStates.map((dispatchState) => (
     ctx.db
       .query("inquiryAttempts")
@@ -374,7 +378,7 @@ async function requireDestinationSafety(
         .gte("createdAt", cutoff))
       .take(destinationWindowLimit)
   )));
-  if (ownerWindows.reduce((total, attempts) => total + attempts.length, 0) >= MAX_CALLS_PER_USER_WINDOW) {
+  if (ownerWindows.reduce((total, attempts) => total + attempts.length, 0) >= userWindowLimit) {
     throw new ConvexError({ code: "USER_RATE_LIMITED", retryAfterSeconds: 60 * 60 });
   }
   if (destinationWindows.reduce((total, attempts) => total + attempts.length, 0) >= destinationWindowLimit) {
